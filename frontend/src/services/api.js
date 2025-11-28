@@ -1,0 +1,165 @@
+import axios from 'axios'
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+
+const api = axios.create({
+  baseURL: API_URL,
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  withCredentials: true
+})
+
+// Request interceptor - add auth token and company ID
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('accessToken')
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
+
+    const companyId = localStorage.getItem('currentCompanyId')
+    if (companyId) {
+      config.headers['X-Company-Id'] = companyId
+    }
+
+    return config
+  },
+  (error) => {
+    return Promise.reject(error)
+  }
+)
+
+// Response interceptor - handle token refresh
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config
+
+    // If error is 401 and we haven't tried to refresh yet
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true
+
+      try {
+        const refreshToken = localStorage.getItem('refreshToken')
+        if (!refreshToken) {
+          throw new Error('No refresh token')
+        }
+
+        const response = await axios.post(`${API_URL}/auth/refresh-token`, {
+          refreshToken
+        })
+
+        if (response.data.success) {
+          const { accessToken, refreshToken: newRefreshToken } = response.data.data
+          
+          localStorage.setItem('accessToken', accessToken)
+          localStorage.setItem('refreshToken', newRefreshToken)
+
+          // Retry the original request with new token
+          originalRequest.headers.Authorization = `Bearer ${accessToken}`
+          return api(originalRequest)
+        }
+      } catch (refreshError) {
+        // Refresh failed, clear tokens and redirect to login
+        localStorage.removeItem('accessToken')
+        localStorage.removeItem('refreshToken')
+        localStorage.removeItem('currentCompanyId')
+        localStorage.removeItem('currentRole')
+        
+        window.location.href = '/login'
+        return Promise.reject(refreshError)
+      }
+    }
+
+    return Promise.reject(error)
+  }
+)
+
+export default api
+
+// API Service Functions
+export const authAPI = {
+  login: (data) => api.post('/auth/login', data),
+  signup: (data) => api.post('/auth/signup', data),
+  logout: (refreshToken) => api.post('/auth/logout', { refreshToken }),
+  refreshToken: (refreshToken) => api.post('/auth/refresh-token', { refreshToken }),
+  getMe: () => api.get('/auth/me'),
+  updateProfile: (data) => api.put('/auth/profile', data),
+  changePassword: (data) => api.put('/auth/change-password', data)
+}
+
+export const companyAPI = {
+  create: (data) => api.post('/companies', data),
+  getMyCompanies: () => api.get('/companies/my'),
+  getCompany: (id) => api.get(`/companies/${id}`),
+  updateCompany: (id, data) => api.put(`/companies/${id}`, data),
+  deleteCompany: (id) => api.delete(`/companies/${id}`),
+  getMembers: (id) => api.get(`/companies/${id}/members`),
+  search: (query) => api.get(`/companies/search?q=${encodeURIComponent(query)}`),
+  join: (companyId) => api.post('/companies/join', { companyId })
+}
+
+export const userRolesAPI = {
+  getMyRoles: () => api.get('/user-company-roles/my-roles'),
+  inviteUser: (data) => api.post('/user-company-roles/invite', data),
+  updateRole: (id, data) => api.put(`/user-company-roles/${id}`, data),
+  removeUser: (id) => api.delete(`/user-company-roles/${id}`),
+  leaveCompany: (companyId) => api.delete(`/user-company-roles/leave/${companyId}`)
+}
+
+export const customersAPI = {
+  getAll: (params) => api.get('/customers', { params }),
+  getOne: (id) => api.get(`/customers/${id}`),
+  create: (data) => api.post('/customers', data),
+  update: (id, data) => api.put(`/customers/${id}`, data),
+  delete: (id) => api.delete(`/customers/${id}`)
+}
+
+export const leadsAPI = {
+  getAll: (params) => api.get('/leads', { params }),
+  getOne: (id) => api.get(`/leads/${id}`),
+  create: (data) => api.post('/leads', data),
+  update: (id, data) => api.put(`/leads/${id}`, data),
+  delete: (id) => api.delete(`/leads/${id}`),
+  getStats: () => api.get('/leads/stats')
+}
+
+export const contactsAPI = {
+  getAll: (params) => api.get('/contacts', { params }),
+  getOne: (id) => api.get(`/contacts/${id}`),
+  create: (data) => api.post('/contacts', data),
+  update: (id, data) => api.put(`/contacts/${id}`, data),
+  delete: (id) => api.delete(`/contacts/${id}`)
+}
+
+export const tasksAPI = {
+  getAll: (params) => api.get('/tasks', { params }),
+  getOne: (id) => api.get(`/tasks/${id}`),
+  create: (data) => api.post('/tasks', data),
+  update: (id, data) => api.put(`/tasks/${id}`, data),
+  delete: (id) => api.delete(`/tasks/${id}`),
+  getMyTasks: () => api.get('/tasks/my')
+}
+
+export const notesAPI = {
+  getAll: (params) => api.get('/notes', { params }),
+  getOne: (id) => api.get(`/notes/${id}`),
+  create: (data) => api.post('/notes', data),
+  update: (id, data) => api.put(`/notes/${id}`, data),
+  delete: (id) => api.delete(`/notes/${id}`)
+}
+
+export const activitiesAPI = {
+  getAll: (params) => api.get('/activities', { params }),
+  getRecent: (limit = 10) => api.get(`/activities/recent?limit=${limit}`),
+  create: (data) => api.post('/activities', data)
+}
+
+export const dashboardAPI = {
+  getAdminStats: () => api.get('/dashboard/admin'),
+  getStaffDashboard: () => api.get('/dashboard/staff'),
+  getCustomerDashboard: () => api.get('/dashboard/customer'),
+  getStats: () => api.get('/dashboard/stats')
+}
+
