@@ -3,6 +3,7 @@ import { prisma } from '../index';
 import { AuthenticatedRequest } from '../types';
 import { Role } from '@prisma/client';
 
+// Get all customers (users who joined as CUSTOMER role)
 export const getCustomers = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     if (!req.companyId) {
@@ -13,43 +14,61 @@ export const getCustomers = async (req: AuthenticatedRequest, res: Response): Pr
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     const search = req.query.search as string;
-    const status = req.query.status as string;
-    const sortBy = (req.query.sortBy as string) || 'createdAt';
+    const sortBy = (req.query.sortBy as string) || 'joinedAt';
     const sortOrder = (req.query.sortOrder as 'asc' | 'desc') || 'desc';
 
     const where: any = {
-      companyId: req.companyId
+      companyId: req.companyId,
+      role: Role.CUSTOMER,
+      isActive: true
     };
 
+    // Search in user's name or email
     if (search) {
-      where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } },
-        { company: { contains: search, mode: 'insensitive' } }
-      ];
+      where.user = {
+        OR: [
+          { name: { contains: search, mode: 'insensitive' } },
+          { email: { contains: search, mode: 'insensitive' } }
+        ]
+      };
     }
 
-    if (status) {
-      where.status = status;
-    }
-
-    const [customers, total] = await Promise.all([
-      prisma.customer.findMany({
+    const [customerRoles, total] = await Promise.all([
+      prisma.userCompanyRole.findMany({
         where,
         skip: (page - 1) * limit,
         take: limit,
         orderBy: { [sortBy]: sortOrder },
         include: {
-          createdBy: {
-            select: { id: true, name: true, avatar: true }
-          },
-          _count: {
-            select: { leads: true, contacts: true, tasks: true }
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phone: true,
+              avatar: true,
+              bio: true,
+              createdAt: true
+            }
           }
         }
       }),
-      prisma.customer.count({ where })
+      prisma.userCompanyRole.count({ where })
     ]);
+
+    // Transform data to customer format
+    const customers = customerRoles.map(cr => ({
+      id: cr.id, // UserCompanyRole ID
+      oderId: cr.userId, // User ID
+      name: cr.user.name,
+      email: cr.user.email,
+      phone: cr.user.phone,
+      avatar: cr.user.avatar,
+      bio: cr.user.bio,
+      joinedAt: cr.joinedAt,
+      userCreatedAt: cr.user.createdAt,
+      role: cr.role
+    }));
 
     res.json({
       success: true,
@@ -72,6 +91,7 @@ export const getCustomers = async (req: AuthenticatedRequest, res: Response): Pr
   }
 };
 
+// Get single customer details
 export const getCustomer = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     if (!req.companyId) {
@@ -81,46 +101,55 @@ export const getCustomer = async (req: AuthenticatedRequest, res: Response): Pro
 
     const { id } = req.params;
 
-    const customer = await prisma.customer.findFirst({
+    const customerRole = await prisma.userCompanyRole.findFirst({
       where: {
         id,
-        companyId: req.companyId
+        companyId: req.companyId,
+        role: Role.CUSTOMER
       },
       include: {
-        createdBy: {
-          select: { id: true, name: true, avatar: true }
-        },
-        leads: {
-          take: 5,
-          orderBy: { createdAt: 'desc' }
-        },
-        contacts: {
-          take: 5,
-          orderBy: { isPrimary: 'desc' }
-        },
-        tasks: {
-          where: { status: { not: 'COMPLETED' } },
-          take: 5,
-          orderBy: { dueDate: 'asc' }
-        },
-        customerNotes: {
-          take: 5,
-          orderBy: { createdAt: 'desc' }
-        },
-        activities: {
-          take: 10,
-          orderBy: { createdAt: 'desc' }
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            avatar: true,
+            bio: true,
+            createdAt: true,
+            createdIssues: {
+              where: { companyId: req.companyId },
+              take: 10,
+              orderBy: { createdAt: 'desc' },
+              include: {
+                _count: { select: { calls: true } }
+              }
+            }
+          }
         }
       }
     });
 
-    if (!customer) {
+    if (!customerRole) {
       res.status(404).json({
         success: false,
         message: 'Customer not found'
       });
       return;
     }
+
+    const customer = {
+      id: customerRole.id,
+      userId: customerRole.userId,
+      name: customerRole.user.name,
+      email: customerRole.user.email,
+      phone: customerRole.user.phone,
+      avatar: customerRole.user.avatar,
+      bio: customerRole.user.bio,
+      joinedAt: customerRole.joinedAt,
+      userCreatedAt: customerRole.user.createdAt,
+      issues: customerRole.user.createdIssues
+    };
 
     res.json({
       success: true,
@@ -135,122 +164,7 @@ export const getCustomer = async (req: AuthenticatedRequest, res: Response): Pro
   }
 };
 
-export const createCustomer = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  try {
-    if (!req.user || !req.companyId) {
-      res.status(400).json({ success: false, message: 'Not authenticated' });
-      return;
-    }
-
-    const { name, email, phone, company, address, city, country, status, notes, avatar } = req.body;
-
-    const customer = await prisma.customer.create({
-      data: {
-        name,
-        email,
-        phone,
-        company,
-        address,
-        city,
-        country,
-        status: status || 'ACTIVE',
-        notes,
-        avatar,
-        companyId: req.companyId,
-        createdById: req.user.id
-      },
-      include: {
-        createdBy: {
-          select: { id: true, name: true, avatar: true }
-        }
-      }
-    });
-
-    // Create activity
-    await prisma.activity.create({
-      data: {
-        type: 'CUSTOMER_CREATED',
-        title: `Customer "${name}" created`,
-        customerId: customer.id,
-        companyId: req.companyId,
-        createdById: req.user.id
-      }
-    });
-
-    res.status(201).json({
-      success: true,
-      message: 'Customer created successfully',
-      data: { customer }
-    });
-  } catch (error) {
-    console.error('Create customer error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error creating customer'
-    });
-  }
-};
-
-export const updateCustomer = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  try {
-    if (!req.companyId) {
-      res.status(400).json({ success: false, message: 'Company ID required' });
-      return;
-    }
-
-    const { id } = req.params;
-
-    // Check if customer exists and belongs to company
-    const existing = await prisma.customer.findFirst({
-      where: { id, companyId: req.companyId }
-    });
-
-    if (!existing) {
-      res.status(404).json({
-        success: false,
-        message: 'Customer not found'
-      });
-      return;
-    }
-
-    const { name, email, phone, company, address, city, country, status, notes, avatar, totalSpent } = req.body;
-
-    const customer = await prisma.customer.update({
-      where: { id },
-      data: {
-        ...(name && { name }),
-        ...(email && { email }),
-        ...(phone !== undefined && { phone }),
-        ...(company !== undefined && { company }),
-        ...(address !== undefined && { address }),
-        ...(city !== undefined && { city }),
-        ...(country !== undefined && { country }),
-        ...(status && { status }),
-        ...(notes !== undefined && { notes }),
-        ...(avatar !== undefined && { avatar }),
-        ...(totalSpent !== undefined && { totalSpent })
-      },
-      include: {
-        createdBy: {
-          select: { id: true, name: true, avatar: true }
-        }
-      }
-    });
-
-    res.json({
-      success: true,
-      message: 'Customer updated successfully',
-      data: { customer }
-    });
-  } catch (error) {
-    console.error('Update customer error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error updating customer'
-    });
-  }
-};
-
+// Remove customer from company (remove their CUSTOMER role)
 export const deleteCustomer = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     if (!req.companyId) {
@@ -258,20 +172,23 @@ export const deleteCustomer = async (req: AuthenticatedRequest, res: Response): 
       return;
     }
 
-    // Only admin/staff can delete
-    if (req.userRole === Role.CUSTOMER) {
+    // Only admin can remove customers
+    if (req.userRole !== Role.ADMIN) {
       res.status(403).json({
         success: false,
-        message: 'Customers cannot delete records'
+        message: 'Only admins can remove customers'
       });
       return;
     }
 
     const { id } = req.params;
 
-    // Check if customer exists and belongs to company
-    const existing = await prisma.customer.findFirst({
-      where: { id, companyId: req.companyId }
+    const existing = await prisma.userCompanyRole.findFirst({
+      where: {
+        id,
+        companyId: req.companyId,
+        role: Role.CUSTOMER
+      }
     });
 
     if (!existing) {
@@ -282,20 +199,34 @@ export const deleteCustomer = async (req: AuthenticatedRequest, res: Response): 
       return;
     }
 
-    await prisma.customer.delete({
+    await prisma.userCompanyRole.delete({
       where: { id }
     });
 
     res.json({
       success: true,
-      message: 'Customer deleted successfully'
+      message: 'Customer removed from company successfully'
     });
   } catch (error) {
     console.error('Delete customer error:', error);
     res.status(500).json({
       success: false,
-      message: 'Error deleting customer'
+      message: 'Error removing customer'
     });
   }
 };
 
+// These are no longer needed but kept for backwards compatibility
+export const createCustomer = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  res.status(400).json({
+    success: false,
+    message: 'Manual customer creation is not allowed. Customers must join the company themselves.'
+  });
+};
+
+export const updateCustomer = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  res.status(400).json({
+    success: false,
+    message: 'Customer profiles are managed by users themselves.'
+  });
+};

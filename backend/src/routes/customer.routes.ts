@@ -2,18 +2,11 @@ import { Router } from 'express';
 import {
   getCustomers,
   getCustomer,
-  createCustomer,
-  updateCustomer,
   deleteCustomer
 } from '../controllers/customer.controller';
 import { authenticate } from '../middleware/auth.middleware';
-import { tenantMiddleware, staffOrAdmin } from '../middleware/tenant.middleware';
-import {
-  createCustomerValidator,
-  updateCustomerValidator,
-  idParamValidator,
-  paginationValidator
-} from '../validators/crm.validator';
+import { tenantMiddleware, adminOnly } from '../middleware/tenant.middleware';
+import { param, query } from 'express-validator';
 import { validate } from '../validators/validate';
 
 const router = Router();
@@ -22,11 +15,19 @@ const router = Router();
 router.use(authenticate);
 router.use(tenantMiddleware);
 
-router.get('/', paginationValidator, validate, getCustomers);
-router.get('/:id', idParamValidator, validate, getCustomer);
-router.post('/', staffOrAdmin, createCustomerValidator, validate, createCustomer);
-router.put('/:id', staffOrAdmin, updateCustomerValidator, validate, updateCustomer);
-router.delete('/:id', staffOrAdmin, idParamValidator, validate, deleteCustomer);
+// Only admins can view and manage customers
+router.get('/', adminOnly, [
+  query('page').optional().isInt({ min: 1 }),
+  query('limit').optional().isInt({ min: 1, max: 100 }),
+  query('search').optional().trim()
+], validate, getCustomers);
+
+router.get('/:id', adminOnly, [
+  param('id').isUUID().withMessage('Invalid customer ID')
+], validate, getCustomer);
+
+router.delete('/:id', adminOnly, [
+  param('id').isUUID().withMessage('Invalid customer ID')
+], validate, deleteCustomer);
 
 export default router;
-

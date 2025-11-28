@@ -1,4 +1,5 @@
 import express from 'express';
+import { createServer } from 'http';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
@@ -15,14 +16,23 @@ import taskRoutes from './routes/task.routes';
 import noteRoutes from './routes/note.routes';
 import activityRoutes from './routes/activity.routes';
 import dashboardRoutes from './routes/dashboard.routes';
+import issueRoutes from './routes/issue.routes';
 
 // Middleware
 import { errorHandler } from './middleware/error.middleware';
 
+// Socket.io
+import { initializeSocket } from './socket';
+
 dotenv.config();
 
 const app = express();
+const httpServer = createServer(app);
 export const prisma = new PrismaClient();
+
+// Initialize Socket.io
+const io = initializeSocket(httpServer);
+export { io };
 
 // CORS Configuration
 app.use(cors({
@@ -53,6 +63,7 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/notes', noteRoutes);
 app.use('/api/activities', activityRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/issues', issueRoutes);
 
 // Error Handler
 app.use(errorHandler);
@@ -69,9 +80,10 @@ const startServer = async () => {
     await prisma.$connect();
     console.log('📦 Connected to PostgreSQL database');
     
-    app.listen(PORT, () => {
+    httpServer.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📍 API available at http://localhost:${PORT}/api`);
+      console.log(`🔌 WebSocket server ready`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);
@@ -91,4 +103,3 @@ process.on('SIGTERM', async () => {
   await prisma.$disconnect();
   process.exit(0);
 });
-

@@ -163,3 +163,14 @@ export const dashboardAPI = {
   getStats: () => api.get('/dashboard/stats')
 }
 
+export const issuesAPI = {
+  getAll: (params) => api.get('/issues', { params }),
+  getOne: (id) => api.get(`/issues/${id}`),
+  create: (data) => api.post('/issues', data),
+  update: (id, data) => api.put(`/issues/${id}`, data),
+  delete: (id) => api.delete(`/issues/${id}`),
+  getStats: () => api.get('/issues/stats'),
+  addCall: (id, data) => api.post(`/issues/${id}/calls`, data),
+  getCallHistory: (id) => api.get(`/issues/${id}/calls`)
+}
+

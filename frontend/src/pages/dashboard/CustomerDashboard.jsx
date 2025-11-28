@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { useAuth } from '../../context/AuthContext'
 import { useCompany } from '../../context/CompanyContext'
 import { dashboardAPI } from '../../services/api'
+import { CallSupportButton } from '../../components/calling'
 import {
   Building2,
   Globe,
@@ -12,7 +13,10 @@ import {
   CheckSquare,
   Activity,
   ExternalLink,
-  Clock
+  Clock,
+  AlertCircle,
+  Plus,
+  Headphones
 } from 'lucide-react'
 
 const CustomerDashboard = () => {
@@ -61,29 +65,75 @@ const CustomerDashboard = () => {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div>
-        <motion.h1
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-2xl lg:text-3xl font-bold"
+      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
+        <div>
+          <motion.h1
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-2xl lg:text-3xl font-bold"
+          >
+            Welcome, {user?.name}! 👋
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.1 }}
+            className="text-dark-500 mt-1"
+          >
+            Here's your customer portal for {currentCompany?.name}.
+          </motion.p>
+        </div>
+
+        {/* Call Support Section */}
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.2 }}
+          className="flex-shrink-0"
         >
-          Welcome, {user?.name}! 👋
-        </motion.h1>
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.1 }}
-          className="text-dark-500 mt-1"
-        >
-          Here's your customer portal for {currentCompany?.name}.
-        </motion.p>
+          <CallSupportButton />
+        </motion.div>
       </div>
+
+      {/* Call Support Card */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15 }}
+        className="card overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 border-slate-700"
+      >
+        <div className="p-6">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+              <Headphones className="w-7 h-7 text-white" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-white">Need Help?</h3>
+              <p className="text-slate-400">Connect with our support team instantly via voice call</p>
+            </div>
+          </div>
+          <div className="mt-6 flex flex-wrap gap-4">
+            <div className="flex items-center gap-2 text-sm text-slate-400">
+              <div className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span>Free voice calls</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-slate-400">
+              <div className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span>No phone required</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-slate-400">
+              <div className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span>Direct browser calling</span>
+            </div>
+          </div>
+        </div>
+      </motion.div>
 
       {/* Company Info Card */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
+        transition={{ delay: 0.25 }}
         className="card overflow-hidden"
       >
         {/* Company Header */}
@@ -238,8 +288,22 @@ const CustomerDashboard = () => {
         transition={{ delay: 0.5 }}
         className="card p-6"
       >
-        <h2 className="text-lg font-semibold mb-4">Quick Links</h2>
-        <div className="grid sm:grid-cols-3 gap-4">
+        <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Link
+            to="/issues"
+            className="flex items-center gap-3 p-4 rounded-xl bg-gradient-to-br from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700 transition-colors"
+          >
+            <Plus className="w-6 h-6" />
+            <span className="font-medium">Create Issue</span>
+          </Link>
+          <Link
+            to="/issues"
+            className="flex items-center gap-3 p-4 rounded-xl bg-dark-50 dark:bg-dark-800 hover:bg-dark-100 dark:hover:bg-dark-700 transition-colors"
+          >
+            <AlertCircle className="w-6 h-6 text-amber-500" />
+            <span className="font-medium">My Issues</span>
+          </Link>
           <Link
             to="/tasks"
             className="flex items-center gap-3 p-4 rounded-xl bg-dark-50 dark:bg-dark-800 hover:bg-dark-100 dark:hover:bg-dark-700 transition-colors"
@@ -248,17 +312,10 @@ const CustomerDashboard = () => {
             <span className="font-medium">My Tasks</span>
           </Link>
           <Link
-            to="/notes"
-            className="flex items-center gap-3 p-4 rounded-xl bg-dark-50 dark:bg-dark-800 hover:bg-dark-100 dark:hover:bg-dark-700 transition-colors"
-          >
-            <Activity className="w-6 h-6 text-accent-500" />
-            <span className="font-medium">View Notes</span>
-          </Link>
-          <Link
             to="/activities"
             className="flex items-center gap-3 p-4 rounded-xl bg-dark-50 dark:bg-dark-800 hover:bg-dark-100 dark:hover:bg-dark-700 transition-colors"
           >
-            <Clock className="w-6 h-6 text-green-500" />
+            <Activity className="w-6 h-6 text-green-500" />
             <span className="font-medium">Activity Feed</span>
           </Link>
         </div>
@@ -268,4 +325,3 @@ const CustomerDashboard = () => {
 }
 
 export default CustomerDashboard
-

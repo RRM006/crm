@@ -37,6 +37,11 @@ model User {
   assignedTasks     Task[]            @relation("TaskAssignee")
   createdNotes      Note[]            @relation("NoteCreator")
   createdActivities Activity[]        @relation("ActivityCreator")
+  
+  // Issue Relations
+  createdIssues     Issue[]           @relation("IssueCustomer")
+  resolvedIssues    Issue[]           @relation("IssueResolver")
+  issueCalls        IssueCall[]
 
   @@map("users")
 }
@@ -84,6 +89,7 @@ model Company {
   activities       Activity[]
   products         Product[]
   services         Service[]
+  issues           Issue[]
 
   @@map("companies")
 }
@@ -391,5 +397,82 @@ model Service {
   updatedAt   DateTime @updatedAt
 
   @@map("services")
+}
+
+// ==================== ISSUES & SUPPORT ====================
+
+enum IssueStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum IssuePriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum IssueCategory {
+  BILLING
+  TECHNICAL
+  GENERAL
+  FEATURE_REQUEST
+  BUG_REPORT
+  OTHER
+}
+
+model Issue {
+  id          String        @id @default(uuid())
+  title       String
+  description String
+  status      IssueStatus   @default(OPEN)
+  priority    IssuePriority @default(MEDIUM)
+  category    IssueCategory @default(GENERAL)
+  
+  // Customer who created the issue
+  customerId  String
+  customer    User          @relation("IssueCustomer", fields: [customerId], references: [id])
+  
+  // Admin who resolved the issue (optional)
+  resolvedById String?
+  resolvedBy   User?        @relation("IssueResolver", fields: [resolvedById], references: [id])
+  resolvedAt   DateTime?
+  resolution   String?
+  
+  // Tenant isolation
+  companyId   String
+  tenantCompany Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  // Relations
+  calls       IssueCall[]
+
+  @@map("issues")
+}
+
+model IssueCall {
+  id          String   @id @default(uuid())
+  issueId     String
+  issue       Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  
+  // Call details
+  callType    String   @default("OUTBOUND") // INBOUND, OUTBOUND
+  duration    Int      @default(0) // in seconds
+  status      String   @default("COMPLETED") // COMPLETED, MISSED, NO_ANSWER, BUSY
+  notes       String?
+  recordingUrl String?
+  
+  // Who made the call
+  callerId    String
+  caller      User     @relation(fields: [callerId], references: [id])
+  
+  createdAt   DateTime @default(now())
+
+  @@map("issue_calls")
 }
 

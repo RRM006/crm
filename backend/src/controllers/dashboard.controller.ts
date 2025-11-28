@@ -16,16 +16,21 @@ export const getDashboardStats = async (req: AuthenticatedRequest, res: Response
       contactsCount,
       tasksCount,
       openTasksCount,
+      openIssuesCount,
       leadsValue,
       wonDealsCount,
       wonDealsValue,
       recentCustomers,
       recentLeads,
+      recentIssues,
       recentActivities,
       leadsByStatus,
       tasksByStatus
     ] = await Promise.all([
-      prisma.customer.count({ where: { companyId: req.companyId } }),
+      // Count customers (users with CUSTOMER role)
+      prisma.userCompanyRole.count({ 
+        where: { companyId: req.companyId, role: 'CUSTOMER', isActive: true } 
+      }),
       prisma.lead.count({ where: { companyId: req.companyId } }),
       prisma.contact.count({ where: { companyId: req.companyId } }),
       prisma.task.count({ where: { companyId: req.companyId } }),
@@ -34,6 +39,12 @@ export const getDashboardStats = async (req: AuthenticatedRequest, res: Response
           companyId: req.companyId, 
           status: { in: ['TODO', 'IN_PROGRESS'] } 
         } 
+      }),
+      prisma.issue.count({
+        where: {
+          companyId: req.companyId,
+          status: { in: ['OPEN', 'IN_PROGRESS'] }
+        }
       }),
       prisma.lead.aggregate({
         where: { companyId: req.companyId },
@@ -46,16 +57,20 @@ export const getDashboardStats = async (req: AuthenticatedRequest, res: Response
         where: { companyId: req.companyId, status: 'WON' },
         _sum: { value: true }
       }),
-      prisma.customer.findMany({
-        where: { companyId: req.companyId },
+      // Get customers from UserCompanyRole
+      prisma.userCompanyRole.findMany({
+        where: { companyId: req.companyId, role: 'CUSTOMER', isActive: true },
         take: 5,
-        orderBy: { createdAt: 'desc' },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          status: true,
-          createdAt: true
+        orderBy: { joinedAt: 'desc' },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              avatar: true
+            }
+          }
         }
       }),
       prisma.lead.findMany({
@@ -68,6 +83,16 @@ export const getDashboardStats = async (req: AuthenticatedRequest, res: Response
           value: true,
           status: true,
           createdAt: true
+        }
+      }),
+      prisma.issue.findMany({
+        where: { companyId: req.companyId },
+        take: 5,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          customer: {
+            select: { id: true, name: true }
+          }
         }
       }),
       prisma.activity.findMany({
@@ -92,6 +117,15 @@ export const getDashboardStats = async (req: AuthenticatedRequest, res: Response
       })
     ]);
 
+    // Transform customers from UserCompanyRole to simpler format
+    const formattedCustomers = recentCustomers.map(cr => ({
+      id: cr.id,
+      name: cr.user.name,
+      email: cr.user.email,
+      avatar: cr.user.avatar,
+      joinedAt: cr.joinedAt
+    }));
+
     res.json({
       success: true,
       data: {
@@ -101,6 +135,7 @@ export const getDashboardStats = async (req: AuthenticatedRequest, res: Response
           contacts: contactsCount,
           tasks: tasksCount,
           openTasks: openTasksCount,
+          openIssues: openIssuesCount,
           totalLeadsValue: leadsValue._sum.value || 0,
           wonDeals: wonDealsCount,
           wonDealsValue: wonDealsValue._sum.value || 0
@@ -116,8 +151,9 @@ export const getDashboardStats = async (req: AuthenticatedRequest, res: Response
           }))
         },
         recent: {
-          customers: recentCustomers,
+          customers: formattedCustomers,
           leads: recentLeads,
+          issues: recentIssues,
           activities: recentActivities
         }
       }

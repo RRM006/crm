@@ -22,7 +22,8 @@ import {
   Building2,
   Sparkles,
   Bell,
-  Search
+  Search,
+  AlertCircle
 } from 'lucide-react'
 
 const DashboardLayout = () => {
@@ -37,9 +38,10 @@ const DashboardLayout = () => {
 
   const navigation = [
     { name: 'Dashboard', icon: LayoutDashboard, href: `/dashboard/${currentRole?.toLowerCase() || 'admin'}` },
-    { name: 'Customers', icon: Users, href: '/customers', roles: ['ADMIN', 'STAFF'] },
+    { name: 'Customers', icon: Users, href: '/customers', roles: ['ADMIN'] },
     { name: 'Leads', icon: Target, href: '/leads', roles: ['ADMIN', 'STAFF'] },
     { name: 'Contacts', icon: UserCircle, href: '/contacts', roles: ['ADMIN', 'STAFF'] },
+    { name: 'Issues', icon: AlertCircle, href: '/issues' },
     { name: 'Tasks', icon: CheckSquare, href: '/tasks' },
     { name: 'Notes', icon: FileText, href: '/notes' },
     { name: 'Activities', icon: Activity, href: '/activities' },

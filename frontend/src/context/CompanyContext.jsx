@@ -9,7 +9,18 @@ const CompanyContext = createContext()
 export const useCompany = () => {
   const context = useContext(CompanyContext)
   if (!context) {
-    throw new Error('useCompany must be used within a CompanyProvider')
+    // Return safe defaults instead of throwing
+    return {
+      currentCompany: null,
+      currentRole: null,
+      companies: [],
+      isLoading: false,
+      switchCompany: () => {},
+      createCompany: async () => ({ success: false }),
+      joinCompany: async () => ({ success: false }),
+      searchCompanies: async () => [],
+      leaveCompany: async () => ({ success: false }),
+    }
   }
   return context
 }

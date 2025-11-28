@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useCompany } from '../../context/CompanyContext'
+import { useCall } from '../../context/CallContext'
 import { dashboardAPI } from '../../services/api'
 import {
   Users,
@@ -13,7 +14,13 @@ import {
   ArrowDownRight,
   Activity,
   Calendar,
-  MoreHorizontal
+  MoreHorizontal,
+  AlertCircle,
+  Phone,
+  PhoneIncoming,
+  Wifi,
+  WifiOff,
+  Headphones
 } from 'lucide-react'
 
 const StatCard = ({ title, value, change, changeType, icon: Icon, color, delay }) => (
@@ -45,6 +52,7 @@ const StatCard = ({ title, value, change, changeType, icon: Icon, color, delay }
 
 const AdminDashboard = () => {
   const { currentCompany } = useCompany()
+  const { isSocketConnected, incomingCall, callStatus } = useCall()
   const [stats, setStats] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
 
@@ -83,12 +91,12 @@ const AdminDashboard = () => {
       color: 'from-purple-500 to-purple-600'
     },
     {
-      title: 'Open Tasks',
-      value: stats?.stats?.openTasks || 0,
-      change: 3.1,
-      changeType: 'down',
-      icon: CheckSquare,
-      color: 'from-amber-500 to-amber-600'
+      title: 'Open Issues',
+      value: stats?.stats?.openIssues || 0,
+      change: 5.2,
+      changeType: 'up',
+      icon: AlertCircle,
+      color: 'from-red-500 to-red-600'
     },
     {
       title: 'Revenue',
@@ -127,22 +135,69 @@ const AdminDashboard = () => {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div>
-        <motion.h1
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-2xl lg:text-3xl font-bold"
+      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+        <div>
+          <motion.h1
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-2xl lg:text-3xl font-bold"
+          >
+            Welcome back! 👋
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.1 }}
+            className="text-dark-500 mt-1"
+          >
+            Here's what's happening with {currentCompany?.name} today.
+          </motion.p>
+        </div>
+
+        {/* Call Center Status */}
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.2 }}
+          className="flex-shrink-0"
         >
-          Welcome back! 👋
-        </motion.h1>
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.1 }}
-          className="text-dark-500 mt-1"
-        >
-          Here's what's happening with {currentCompany?.name} today.
-        </motion.p>
+          <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border ${
+            isSocketConnected 
+              ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800' 
+              : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700'
+          }`}>
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+              isSocketConnected 
+                ? 'bg-emerald-100 dark:bg-emerald-900/40' 
+                : 'bg-slate-200 dark:bg-slate-700'
+            }`}>
+              {isSocketConnected ? (
+                <Headphones className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              ) : (
+                <WifiOff className="w-5 h-5 text-slate-500" />
+              )}
+            </div>
+            <div>
+              <p className={`font-medium text-sm ${
+                isSocketConnected 
+                  ? 'text-emerald-700 dark:text-emerald-300' 
+                  : 'text-slate-600 dark:text-slate-400'
+              }`}>
+                {isSocketConnected ? 'Call Center Active' : 'Connecting...'}
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                {isSocketConnected ? 'Ready to receive calls' : 'Establishing connection'}
+              </p>
+            </div>
+            {isSocketConnected && (
+              <motion.div
+                animate={{ scale: [1, 1.2, 1] }}
+                transition={{ duration: 2, repeat: Infinity }}
+                className="w-3 h-3 rounded-full bg-emerald-500 ml-2"
+              />
+            )}
+          </div>
+        </motion.div>
       </div>
 
       {/* Stats Grid */}
@@ -239,11 +294,61 @@ const AdminDashboard = () => {
         </motion.div>
       </div>
 
-      {/* Recent Customers */}
+      {/* Recent Issues */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.7 }}
+        className="card"
+      >
+        <div className="flex items-center justify-between p-6 border-b border-dark-200 dark:border-dark-800">
+          <h2 className="text-lg font-semibold">Recent Issues</h2>
+          <Link to="/issues" className="text-sm text-primary-500 hover:text-primary-600">
+            View all
+          </Link>
+        </div>
+        <div className="divide-y divide-dark-100 dark:divide-dark-800">
+          {stats?.recent?.issues?.length > 0 ? (
+            stats.recent.issues.map((issue) => (
+              <Link
+                key={issue.id}
+                to="/issues"
+                className="flex items-center gap-4 p-4 hover:bg-dark-50 dark:hover:bg-dark-800 transition-colors"
+              >
+                <AlertCircle className={`w-5 h-5 ${
+                  issue.status === 'OPEN' ? 'text-blue-500' :
+                  issue.status === 'IN_PROGRESS' ? 'text-amber-500' :
+                  issue.status === 'RESOLVED' ? 'text-green-500' : 'text-gray-500'
+                }`} />
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium truncate">{issue.title}</p>
+                  <p className="text-sm text-dark-500">
+                    {issue.customer?.name} • {new Date(issue.createdAt).toLocaleDateString()}
+                  </p>
+                </div>
+                <span className={`badge ${
+                  issue.status === 'OPEN' ? 'badge-info' :
+                  issue.status === 'IN_PROGRESS' ? 'badge-warning' :
+                  issue.status === 'RESOLVED' ? 'badge-success' : 'badge-danger'
+                }`}>
+                  {issue.status.replace('_', ' ')}
+                </span>
+              </Link>
+            ))
+          ) : (
+            <div className="p-8 text-center text-dark-500">
+              <AlertCircle className="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <p>No issues yet</p>
+            </div>
+          )}
+        </div>
+      </motion.div>
+
+      {/* Recent Customers */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.8 }}
         className="card"
       >
         <div className="flex items-center justify-between p-6 border-b border-dark-200 dark:border-dark-800">
@@ -258,7 +363,6 @@ const AdminDashboard = () => {
               <tr>
                 <th>Customer</th>
                 <th>Email</th>
-                <th>Status</th>
                 <th>Joined</th>
                 <th></th>
               </tr>
@@ -270,19 +374,14 @@ const AdminDashboard = () => {
                     <td>
                       <div className="flex items-center gap-3">
                         <div className="avatar avatar-sm">
-                          {customer.name.charAt(0)}
+                          {customer.name?.charAt(0) || 'C'}
                         </div>
                         <span className="font-medium">{customer.name}</span>
                       </div>
                     </td>
                     <td className="text-dark-500">{customer.email}</td>
-                    <td>
-                      <span className={`badge ${getStatusColor(customer.status)}`}>
-                        {customer.status}
-                      </span>
-                    </td>
                     <td className="text-dark-500">
-                      {new Date(customer.createdAt).toLocaleDateString()}
+                      {new Date(customer.joinedAt).toLocaleDateString()}
                     </td>
                     <td>
                       <Link
@@ -296,7 +395,7 @@ const AdminDashboard = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={5} className="text-center py-8 text-dark-500">
+                  <td colSpan={4} className="text-center py-8 text-dark-500">
                     <Users className="w-12 h-12 mx-auto mb-3 opacity-50" />
                     <p>No customers yet</p>
                   </td>
@@ -311,4 +410,3 @@ const AdminDashboard = () => {
 }
 
 export default AdminDashboard
-

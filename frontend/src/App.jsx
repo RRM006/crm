@@ -27,6 +27,7 @@ import Contacts from './pages/crm/Contacts'
 import Tasks from './pages/crm/Tasks'
 import Notes from './pages/crm/Notes'
 import Activities from './pages/crm/Activities'
+import Issues from './pages/crm/Issues'
 
 // Settings
 import Settings from './pages/Settings'
@@ -138,12 +139,12 @@ function App() {
 
         {/* CRM Routes */}
         <Route path="/customers" element={
-          <ProtectedRoute allowedRoles={['ADMIN', 'STAFF']}>
+          <ProtectedRoute allowedRoles={['ADMIN']}>
             <Customers />
           </ProtectedRoute>
         } />
         <Route path="/customers/:id" element={
-          <ProtectedRoute allowedRoles={['ADMIN', 'STAFF']}>
+          <ProtectedRoute allowedRoles={['ADMIN']}>
             <CustomerDetail />
           </ProtectedRoute>
         } />
@@ -165,6 +166,9 @@ function App() {
         <Route path="/tasks" element={<Tasks />} />
         <Route path="/notes" element={<Notes />} />
         <Route path="/activities" element={<Activities />} />
+        <Route path="/issues" element={<Issues />} />
+        
+        {/* Customer-specific route redirect */}
 
         {/* Settings & Profile */}
         <Route path="/settings" element={<Settings />} />
