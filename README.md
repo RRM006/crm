@@ -30,13 +30,21 @@ A complete, modern multi-tenant CRM web application built with React, Node.js, E
 - **Call system**: Admins can log calls for each issue with duration, status, and notes
 - **Call history**: View all calls made for each issue
 
-### 🔊 WebRTC Voice Calling (NEW!)
+### 🔊 WebRTC Voice Calling
 - **Browser-based calling**: No phone or third-party apps needed
 - **Customer-to-Admin calls**: Customers can call support directly from their dashboard
 - **Real-time notifications**: Admins receive incoming call popups with accept/reject
 - **Call flow**: Request → Ringing → Accept → Connect → End
 - **Call status indicators**: Shows online agents and connection status
 - **Free & peer-to-peer**: Uses WebRTC + Socket.io (no paid APIs like Twilio)
+
+### 🤖 Telegram Bot Integration (NEW!)
+- **Full CRM access via Telegram**: Manage leads, tasks, issues from your phone
+- **Phone number linking**: Auto-link accounts via phone number verification
+- **Real-time notifications**: Get notified about new leads, tasks, issues
+- **Interactive commands**: View dashboard, manage data with inline keyboards
+- **All roles supported**: Admins, Staff, and Customers can use the bot
+- **Scheduled reminders**: Automatic task due date reminders
 
 ### Modern UI/UX
 - **Responsive Design**: Works on desktop, tablet, and mobile
@@ -65,6 +73,8 @@ A complete, modern multi-tenant CRM web application built with React, Node.js, E
 - **bcrypt** for password hashing
 - **Express Validator** for input validation
 - **Socket.io** for WebSocket signaling
+- **Telegraf** for Telegram bot
+- **node-cron** for scheduled tasks
 
 ## Getting Started
 
@@ -96,6 +106,10 @@ JWT_REFRESH_EXPIRES_IN="7d"
 PORT=5000
 NODE_ENV=development
 FRONTEND_URL="http://localhost:5173"
+
+# Telegram Bot (Optional - for Telegram integration)
+TELEGRAM_BOT_TOKEN="your-telegram-bot-token"
+TELEGRAM_WEBHOOK_URL="https://your-domain.com/telegram-webhook"  # Production only
 ```
 
 4. Generate Prisma client and run migrations:
@@ -233,6 +247,78 @@ npm run dev
 | `webrtc-ice-candidate` | Peer → Peer | ICE candidate exchange |
 | `call-end` | Either → Server | End active call |
 
+## 🤖 Telegram Bot Setup
+
+### Creating Your Bot
+
+1. **Open Telegram** and search for `@BotFather`
+2. **Send `/newbot`** and follow the prompts
+3. **Copy your bot token** (looks like: `123456789:ABCdefGHIjklMNOpqrsTUVwxyz`)
+4. **Add the token** to your backend `.env` file:
+   ```env
+   TELEGRAM_BOT_TOKEN="your-bot-token-here"
+   ```
+
+### How Users Link Their Account
+
+1. User adds their phone number in **Settings → Telegram** in the CRM
+2. User opens the bot in Telegram: `@YourBotName`
+3. User clicks **"Share Phone Number"** button
+4. Bot automatically links the account if phone matches
+
+### Available Bot Commands
+
+| Command | Description |
+|---------|-------------|
+| `/start` | Start bot & link account |
+| `/help` | Show all commands |
+| `/dashboard` | View CRM statistics |
+| `/leads` | List & manage leads |
+| `/tasks` | List & manage tasks |
+| `/issues` | List & manage issues |
+| `/customers` | List customers |
+| `/companies` | List your companies |
+| `/switch` | Switch active company |
+| `/newlead` | Create a new lead |
+| `/newtask` | Create a new task |
+| `/profile` | View your profile |
+
+### Bot Features
+
+- **Interactive Inline Keyboards**: Quick actions without typing commands
+- **Real-time Notifications**:
+  - New leads assigned to you
+  - Tasks due today/tomorrow
+  - New customer issues
+  - Issues resolved
+  - New customers joined
+- **Scheduled Reminders**:
+  - Hourly task due reminders
+  - Daily overdue task alerts
+  - Tomorrow's task preview (5 PM)
+
+### Frontend Environment Variables
+
+Create a `.env` file in the `frontend/` directory:
+
+```env
+VITE_API_URL=http://localhost:5000/api
+VITE_BACKEND_URL=http://localhost:5000
+VITE_TELEGRAM_BOT_USERNAME=YourBotUsername
+```
+
+### Production Deployment
+
+For production, use webhooks instead of polling:
+
+```env
+# Backend .env
+TELEGRAM_WEBHOOK_URL="https://your-domain.com/telegram-webhook"
+NODE_ENV=production
+```
+
+The bot automatically switches to webhook mode in production.
+
 ## API Endpoints
 
 ### Authentication
@@ -274,6 +360,15 @@ Modules: `customers`, `leads`, `contacts`, `tasks`, `notes`, `activities`
 - `GET /api/dashboard/admin` - Admin dashboard stats
 - `GET /api/dashboard/staff` - Staff dashboard
 - `GET /api/dashboard/customer` - Customer dashboard
+
+### Telegram
+- `PUT /api/telegram/phone` - Update phone number
+- `GET /api/telegram/status` - Get Telegram link status
+- `DELETE /api/telegram/unlink` - Unlink Telegram account
+- `POST /api/telegram/test-notification` - Send test notification
+- `GET /api/telegram/notifications` - Get notifications
+- `PUT /api/telegram/notifications/:id/read` - Mark notification read
+- `PUT /api/telegram/notifications/read-all` - Mark all as read
 
 ## User Flow
 

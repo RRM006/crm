@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
 import { useCompany } from '../context/CompanyContext'
 import { useTheme } from '../context/ThemeContext'
+import NotificationBell from '../components/NotificationBell'
 import {
   LayoutDashboard,
   Users,
@@ -21,7 +22,6 @@ import {
   ChevronDown,
   Building2,
   Sparkles,
-  Bell,
   Search,
   AlertCircle
 } from 'lucide-react'
@@ -247,10 +247,7 @@ const DashboardLayout = () => {
                 )}
               </button>
 
-              <button className="p-2.5 rounded-xl hover:bg-dark-100 dark:hover:bg-dark-800 transition-colors relative">
-                <Bell className="w-5 h-5" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-              </button>
+              <NotificationBell />
 
               {/* User Menu */}
               <div className="relative ml-2">

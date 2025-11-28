@@ -174,3 +174,14 @@ export const issuesAPI = {
   getCallHistory: (id) => api.get(`/issues/${id}/calls`)
 }
 
+// Telegram API
+export const telegramAPI = {
+  updatePhone: (phone) => api.put('/telegram/phone', { phone }),
+  getStatus: () => api.get('/telegram/status'),
+  unlink: () => api.delete('/telegram/unlink'),
+  testNotification: () => api.post('/telegram/test-notification'),
+  getNotifications: (params) => api.get('/telegram/notifications', { params }),
+  markAsRead: (id) => api.put(`/telegram/notifications/${id}/read`),
+  markAllAsRead: () => api.put('/telegram/notifications/read-all')
+}
+

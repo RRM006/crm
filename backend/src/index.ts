@@ -3,7 +3,7 @@ import { createServer } from 'http';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
-import { PrismaClient } from '@prisma/client';
+import prisma from './lib/prisma';
 
 // Routes
 import authRoutes from './routes/auth.routes';
@@ -17,6 +17,7 @@ import noteRoutes from './routes/note.routes';
 import activityRoutes from './routes/activity.routes';
 import dashboardRoutes from './routes/dashboard.routes';
 import issueRoutes from './routes/issue.routes';
+import telegramRoutes from './routes/telegram.routes';
 
 // Middleware
 import { errorHandler } from './middleware/error.middleware';
@@ -24,11 +25,15 @@ import { errorHandler } from './middleware/error.middleware';
 // Socket.io
 import { initializeSocket } from './socket';
 
+// Telegram Bot
+import { initBot } from './telegram/bot';
+import { initScheduler } from './telegram/scheduler';
+
 dotenv.config();
 
 const app = express();
 const httpServer = createServer(app);
-export const prisma = new PrismaClient();
+export { prisma };
 
 // Initialize Socket.io
 const io = initializeSocket(httpServer);
@@ -64,6 +69,7 @@ app.use('/api/notes', noteRoutes);
 app.use('/api/activities', activityRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/issues', issueRoutes);
+app.use('/api/telegram', telegramRoutes);
 
 // Error Handler
 app.use(errorHandler);
@@ -79,6 +85,27 @@ const startServer = async () => {
   try {
     await prisma.$connect();
     console.log('📦 Connected to PostgreSQL database');
+    
+    // Initialize Telegram Bot (if token is configured)
+    const telegramToken = process.env.TELEGRAM_BOT_TOKEN;
+    if (telegramToken) {
+      const bot = initBot(telegramToken);
+      
+      // Use webhook in production, polling in development
+      if (process.env.NODE_ENV === 'production' && process.env.TELEGRAM_WEBHOOK_URL) {
+        await bot.telegram.setWebhook(process.env.TELEGRAM_WEBHOOK_URL);
+        app.use(bot.webhookCallback('/telegram-webhook'));
+        console.log('🤖 Telegram bot initialized with webhook');
+      } else {
+        bot.launch();
+        console.log('🤖 Telegram bot initialized with polling');
+      }
+      
+      // Initialize notification scheduler
+      initScheduler();
+    } else {
+      console.log('⚠️ Telegram bot not configured (TELEGRAM_BOT_TOKEN not set)');
+    }
     
     httpServer.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
