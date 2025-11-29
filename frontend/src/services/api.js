@@ -187,3 +187,29 @@ export const telegramAPI = {
   markAllAsRead: () => api.put('/telegram/notifications/read-all')
 }
 
+// Email API
+export const emailAPI = {
+  // Gmail OAuth
+  getGmailAuthUrl: () => api.get('/email/gmail/auth-url'),
+  disconnectGmail: () => api.delete('/email/gmail/disconnect'),
+  getGmailStatus: () => api.get('/email/gmail/status'),
+  
+  // Email Operations
+  sendEmail: (data) => api.post('/email/send', data),
+  getInbox: (params) => api.get('/email/inbox', { params }),
+  getSent: (params) => api.get('/email/sent', { params }),
+  getEmail: (id) => api.get(`/email/message/${id}`),
+  deleteEmail: (id) => api.delete(`/email/message/${id}`),
+  
+  // CRM Emails
+  getCrmEmails: (params) => api.get('/email/crm', { params }),
+  getEmailStats: () => api.get('/email/stats'),
+  getEmailHistory: (entityType, entityId) => api.get(`/email/history/${entityType}/${entityId}`),
+  
+  // Templates
+  getTemplates: () => api.get('/email/templates'),
+  createTemplate: (data) => api.post('/email/templates', data),
+  updateTemplate: (id, data) => api.put(`/email/templates/${id}`, data),
+  deleteTemplate: (id) => api.delete(`/email/templates/${id}`)
+}
+

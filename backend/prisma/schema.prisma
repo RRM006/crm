@@ -57,6 +57,11 @@ model User {
   createdIssues     Issue[]           @relation("IssueCustomer")
   resolvedIssues    Issue[]           @relation("IssueResolver")
   issueCalls        IssueCall[]
+  
+  // Email Relations
+  sentEmails        Email[]           @relation("EmailSender")
+  emailTemplates    EmailTemplate[]   @relation("TemplateCreator")
+  gmailCredential   GmailCredential?
 
   @@map("users")
 }
@@ -105,6 +110,8 @@ model Company {
   products         Product[]
   services         Service[]
   issues           Issue[]
+  emails           Email[]
+  emailTemplates   EmailTemplate[]
 
   @@map("companies")
 }
@@ -173,6 +180,7 @@ model Customer {
   tasks       Task[]
   customerNotes Note[]
   activities  Activity[]
+  emails      Email[]
 
   @@map("customers")
 }
@@ -229,6 +237,7 @@ model Lead {
   tasks       Task[]
   notes       Note[]
   activities  Activity[]
+  emails      Email[]
 
   @@map("leads")
 }
@@ -258,6 +267,9 @@ model Contact {
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  // Email relations
+  emails      Email[]
 
   @@map("contacts")
 }
@@ -489,6 +501,155 @@ model IssueCall {
   createdAt   DateTime @default(now())
 
   @@map("issue_calls")
+}
+
+// ==================== EMAIL SYSTEM ====================
+
+enum EmailStatus {
+  DRAFT
+  QUEUED
+  SENT
+  DELIVERED
+  OPENED
+  CLICKED
+  BOUNCED
+  FAILED
+}
+
+enum EmailDirection {
+  INBOUND
+  OUTBOUND
+}
+
+model Email {
+  id              String         @id @default(uuid())
+  messageId       String?        @unique // Gmail message ID
+  threadId        String?        // Gmail thread ID
+  direction       EmailDirection @default(OUTBOUND)
+  
+  // Email content
+  fromEmail       String
+  fromName        String?
+  toEmail         String
+  toName          String?
+  ccEmails        String[]       @default([])
+  bccEmails       String[]       @default([])
+  subject         String
+  bodyText        String?
+  bodyHtml        String?
+  
+  // Tracking
+  status          EmailStatus    @default(DRAFT)
+  sentAt          DateTime?
+  deliveredAt     DateTime?
+  openedAt        DateTime?
+  openCount       Int            @default(0)
+  clickedAt       DateTime?
+  clickCount      Int            @default(0)
+  bouncedAt       DateTime?
+  bounceReason    String?
+  
+  // Tracking pixel and link IDs
+  trackingId      String?        @unique @default(uuid())
+  
+  // Related entities (optional)
+  contactId       String?
+  contact         Contact?       @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  leadId          String?
+  lead            Lead?          @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  customerId      String?
+  customer        Customer?      @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  
+  // Template used (optional)
+  templateId      String?
+  template        EmailTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  
+  // Tenant isolation
+  companyId       String
+  tenantCompany   Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  // Creator
+  createdById     String
+  createdBy       User           @relation("EmailSender", fields: [createdById], references: [id])
+  
+  // Metadata
+  metadata        Json?
+  attachments     Json?          // Array of attachment info
+  
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  // Link tracking
+  trackedLinks    EmailLink[]
+
+  @@index([companyId, createdAt])
+  @@index([contactId])
+  @@index([leadId])
+  @@index([customerId])
+  @@index([trackingId])
+  @@map("emails")
+}
+
+model EmailTemplate {
+  id              String    @id @default(uuid())
+  name            String
+  subject         String
+  bodyHtml        String
+  bodyText        String?
+  category        String?
+  isActive        Boolean   @default(true)
+  
+  // Variables that can be replaced (e.g., {{firstName}}, {{companyName}})
+  variables       String[]  @default([])
+  
+  // Tenant isolation
+  companyId       String
+  tenantCompany   Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  // Creator
+  createdById     String
+  createdBy       User      @relation("TemplateCreator", fields: [createdById], references: [id])
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Emails using this template
+  emails          Email[]
+
+  @@index([companyId])
+  @@map("email_templates")
+}
+
+model EmailLink {
+  id            String    @id @default(uuid())
+  emailId       String
+  email         Email     @relation(fields: [emailId], references: [id], onDelete: Cascade)
+  
+  originalUrl   String
+  trackingCode  String    @unique @default(uuid())
+  clickCount    Int       @default(0)
+  lastClickedAt DateTime?
+  
+  createdAt     DateTime  @default(now())
+
+  @@index([trackingCode])
+  @@map("email_links")
+}
+
+model GmailCredential {
+  id            String    @id @default(uuid())
+  userId        String    @unique
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  accessToken   String
+  refreshToken  String
+  tokenExpiry   DateTime
+  email         String
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("gmail_credentials")
 }
 
 // ==================== NOTIFICATIONS ====================

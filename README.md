@@ -39,7 +39,15 @@ A complete, modern multi-tenant CRM web application built with React, Node.js, E
 - **Call status indicators**: Shows online agents and connection status
 - **Free & peer-to-peer**: Uses WebRTC + Socket.io (no paid APIs like Twilio)
 
-### 🤖 Telegram Bot Integration (NEW!)
+### 📧 Email Integration (Gmail API)
+- **Gmail integration**: Connect your Gmail account to send/receive emails
+- **Email compose modal**: Rich text editor with templates support
+- **Email tracking**: Open rates, click tracking for sent emails
+- **CRM email history**: View all emails sent to contacts, leads, customers
+- **Email templates**: Create reusable templates with variable placeholders
+- **All roles supported**: Every role can access email functionality
+
+### 🤖 Telegram Bot Integration
 - **Full CRM access via Telegram**: Manage leads, tasks, issues from your phone
 - **Phone number linking**: Auto-link accounts via phone number verification
 - **Real-time notifications**: Get notified about new leads, tasks, issues
@@ -368,6 +376,57 @@ VITE_GOOGLE_CLIENT_ID="your-client-id.apps.googleusercontent.com"
 4. Backend verifies the Google token
 5. If email exists: Links Google account and logs in
 6. If new user: Creates account with Google profile info
+
+## 📧 Gmail API Setup (For Email Integration)
+
+### Creating Gmail API Credentials
+
+1. **Go to Google Cloud Console**: https://console.cloud.google.com/
+2. **Select your project** (same project as Google OAuth)
+3. **Enable the Gmail API**:
+   - Go to "APIs & Services" → "Library"
+   - Search for "Gmail API" and enable it
+4. **Configure OAuth consent screen** (if not already done):
+   - Add these scopes:
+     - `https://www.googleapis.com/auth/gmail.send`
+     - `https://www.googleapis.com/auth/gmail.readonly`
+     - `https://www.googleapis.com/auth/gmail.modify`
+5. **Create OAuth credentials** (if different from sign-in):
+   - Go to "APIs & Services" → "Credentials"
+   - Click "Create Credentials" → "OAuth client ID"
+   - Select "Web application"
+   - Add authorized redirect URI:
+     - `http://localhost:5000/api/email/gmail/callback` (development)
+     - `https://your-api-domain.com/api/email/gmail/callback` (production)
+6. **Copy the Client ID and Client Secret**
+
+### Configuration
+
+**Backend `.env`**:
+```env
+# Google OAuth (for Sign-In)
+GOOGLE_CLIENT_ID="your-client-id.apps.googleusercontent.com"
+
+# Gmail API (for Email Integration)
+GOOGLE_CLIENT_SECRET="your-client-secret"
+GOOGLE_REDIRECT_URI="http://localhost:5000/api/email/gmail/callback"
+BACKEND_URL="http://localhost:5000"
+```
+
+### How Email Integration Works
+
+1. User navigates to Email section in the CRM
+2. Clicks "Connect Gmail" to authorize
+3. User grants permission for email access
+4. CRM can now send and read emails from their Gmail account
+5. Sent emails are tracked for opens and clicks
+6. Email history is linked to contacts, leads, and customers
+
+### Email Tracking
+
+- **Open Tracking**: 1x1 transparent pixel embedded in emails
+- **Click Tracking**: Links are replaced with tracking URLs that redirect
+- **Statistics**: View open rates, click rates, and bounce rates
 
 ## API Endpoints
 

@@ -28,6 +28,7 @@ import Tasks from './pages/crm/Tasks'
 import Notes from './pages/crm/Notes'
 import Activities from './pages/crm/Activities'
 import Issues from './pages/crm/Issues'
+import Email from './pages/email/Email'
 
 // Settings
 import Settings from './pages/Settings'
@@ -167,6 +168,7 @@ function App() {
         <Route path="/notes" element={<Notes />} />
         <Route path="/activities" element={<Activities />} />
         <Route path="/issues" element={<Issues />} />
+        <Route path="/email" element={<Email />} />
         
         {/* Customer-specific route redirect */}
 
