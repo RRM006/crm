@@ -39,6 +39,18 @@ A complete, modern multi-tenant CRM web application built with React, Node.js, E
 - **Call status indicators**: Shows online agents and connection status
 - **Free & peer-to-peer**: Uses WebRTC + Socket.io (no paid APIs like Twilio)
 
+### 🤖 AI Assistant (Gemini)
+- **Gemini-powered chatbot**: Intelligent AI assistant in the sidebar
+- **Role-based access**: AI only accesses data based on user's permissions
+- **CRM context aware**: AI understands your leads, contacts, tasks, and issues
+- **Smart suggestions**: Quick prompts based on your role
+- **Conversation history**: Save and continue conversations
+- **Features include**:
+  - Answer questions about CRM data
+  - Summarize customer interactions
+  - Suggest next actions
+  - Draft emails and messages
+
 ### 📧 Email Integration (Gmail API)
 - **Gmail integration**: Connect your Gmail account to send/receive emails
 - **Email compose modal**: Rich text editor with templates support
@@ -118,6 +130,14 @@ FRONTEND_URL="http://localhost:5173"
 
 # Google OAuth (Optional - for Google Sign-In)
 GOOGLE_CLIENT_ID="your-google-client-id.apps.googleusercontent.com"
+
+# Gmail API (Optional - for Email Integration)
+GOOGLE_CLIENT_SECRET="your-google-client-secret"
+GOOGLE_REDIRECT_URI="http://localhost:5000/api/email/gmail/callback"
+BACKEND_URL="http://localhost:5000"
+
+# Gemini AI (Optional - for AI Assistant)
+GEMINI_API_KEY="your-gemini-api-key"
 
 # Telegram Bot (Optional - for Telegram integration)
 TELEGRAM_BOT_TOKEN="your-telegram-bot-token"
@@ -376,6 +396,71 @@ VITE_GOOGLE_CLIENT_ID="your-client-id.apps.googleusercontent.com"
 4. Backend verifies the Google token
 5. If email exists: Links Google account and logs in
 6. If new user: Creates account with Google profile info
+
+## 🤖 Gemini AI Setup
+
+### Getting Your API Key
+
+1. **Go to Google AI Studio**: https://aistudio.google.com/
+2. **Sign in** with your Google account
+3. **Click "Get API Key"** in the top right
+4. **Create API Key** for a new or existing project
+5. **Copy the API key**
+
+### Configuration
+
+**Backend `.env`**:
+```env
+GEMINI_API_KEY="your-gemini-api-key"
+```
+
+### How It Works
+
+1. Click the **AI Assistant** button in the sidebar (available for all roles)
+2. The AI has access to your CRM data based on your role:
+   - **ADMIN**: Full access to customers, leads, contacts, tasks, issues, activities
+   - **STAFF**: Access to leads, contacts, and tasks
+   - **CUSTOMER**: Access to their own issues and tasks only
+3. Ask questions, get summaries, or request drafts
+4. Conversations are saved and can be continued later
+
+### MCP (Model Context Protocol) Integration
+
+The AI Assistant uses MCP tools to directly interact with your CRM data:
+
+**Available MCP Tools by Role:**
+
+| Tool | ADMIN | STAFF | CUSTOMER | Description |
+|------|:-----:|:-----:|:--------:|-------------|
+| `get_leads` | ✅ | ✅ | ❌ | Query leads with status filtering |
+| `get_lead_details` | ✅ | ✅ | ❌ | Get detailed lead info with tasks/notes |
+| `get_contacts` | ✅ | ✅ | ❌ | Search and list contacts |
+| `get_customers` | ✅ | ❌ | ❌ | View customer data |
+| `get_tasks` | ✅ | ✅ | ✅ | Query tasks (filtered by role) |
+| `get_issues` | ✅ | ✅ | ✅ | View support issues |
+| `get_activities` | ✅ | ✅ | ❌ | Get activity timeline |
+| `get_dashboard_stats` | ✅ | ✅ | ❌ | Get CRM statistics |
+| `create_task` | ✅ | ✅ | ❌ | Create new tasks |
+| `update_lead_status` | ✅ | ✅ | ❌ | Update lead pipeline status |
+| `create_note` | ✅ | ✅ | ❌ | Add notes to leads/customers |
+| `create_issue` | ❌ | ❌ | ✅ | Create support tickets |
+| `draft_email` | ✅ | ✅ | ❌ | Generate email drafts |
+| `search_crm` | ✅ | ✅ | ❌ | Search across CRM entities |
+
+**Example Prompts:**
+- "Show me all leads in negotiation stage"
+- "Create a follow-up task for tomorrow"
+- "What's the total pipeline value?"
+- "Search for contacts named John"
+- "Update lead ABC123 to won"
+
+### AI Capabilities by Role
+
+| Role | Can Ask About |
+|------|---------------|
+| ADMIN | All CRM data, analytics, team tasks, customer insights |
+| STAFF | Leads, contacts, assigned tasks, sales pipeline |
+| CUSTOMER | Their support issues, task status, general help |
 
 ## 📧 Gmail API Setup (For Email Integration)
 

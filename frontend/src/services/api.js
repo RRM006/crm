@@ -187,6 +187,17 @@ export const telegramAPI = {
   markAllAsRead: () => api.put('/telegram/notifications/read-all')
 }
 
+// AI Assistant API (with MCP tools)
+export const aiAPI = {
+  chat: (message, conversationId) => api.post('/ai/chat', { message, conversationId }),
+  getConversations: () => api.get('/ai/conversations'),
+  getConversation: (id) => api.get(`/ai/conversations/${id}`),
+  deleteConversation: (id) => api.delete(`/ai/conversations/${id}`),
+  clearConversations: () => api.delete('/ai/conversations'),
+  getSuggestions: () => api.get('/ai/suggestions'),
+  getTools: () => api.get('/ai/tools') // Get available MCP tools for current role
+}
+
 // Email API
 export const emailAPI = {
   // Gmail OAuth

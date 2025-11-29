@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { useCompany } from '../context/CompanyContext'
 import { useTheme } from '../context/ThemeContext'
 import NotificationBell from '../components/NotificationBell'
+import { AIChatbot } from '../components/ai'
 import {
   LayoutDashboard,
   Users,
@@ -24,7 +25,8 @@ import {
   Sparkles,
   Search,
   AlertCircle,
-  Mail
+  Mail,
+  Bot
 } from 'lucide-react'
 
 const DashboardLayout = () => {
@@ -36,6 +38,7 @@ const DashboardLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [companyDropdownOpen, setCompanyDropdownOpen] = useState(false)
   const [userDropdownOpen, setUserDropdownOpen] = useState(false)
+  const [aiChatOpen, setAiChatOpen] = useState(false)
 
   const navigation = [
     { name: 'Dashboard', icon: LayoutDashboard, href: `/dashboard/${currentRole?.toLowerCase() || 'admin'}` },
@@ -192,6 +195,20 @@ const DashboardLayout = () => {
 
           {/* Bottom Section */}
           <div className="p-4 border-t border-dark-200 dark:border-dark-800 space-y-2">
+            {/* AI Assistant Button */}
+            <button
+              onClick={() => {
+                setAiChatOpen(true)
+                setSidebarOpen(false)
+              }}
+              className="sidebar-link w-full bg-gradient-to-r from-violet-500/10 to-purple-500/10 hover:from-violet-500/20 hover:to-purple-500/20 border border-violet-500/20"
+            >
+              <Bot className="w-5 h-5 text-violet-500" />
+              <span className="bg-gradient-to-r from-violet-500 to-purple-500 bg-clip-text text-transparent font-medium">
+                AI Assistant
+              </span>
+              <Sparkles className="w-4 h-4 text-violet-500 ml-auto" />
+            </button>
             <NavLink
               to="/settings"
               className={({ isActive }) =>
@@ -327,6 +344,9 @@ const DashboardLayout = () => {
           <Outlet />
         </main>
       </div>
+
+      {/* AI Chatbot */}
+      <AIChatbot isOpen={aiChatOpen} onClose={() => setAiChatOpen(false)} />
     </div>
   )
 }

@@ -19,6 +19,7 @@ import dashboardRoutes from './routes/dashboard.routes';
 import issueRoutes from './routes/issue.routes';
 import telegramRoutes from './routes/telegram.routes';
 import emailRoutes from './routes/email.routes';
+import aiRoutes from './routes/ai.routes';
 
 // Middleware
 import { errorHandler } from './middleware/error.middleware';
@@ -72,6 +73,7 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/issues', issueRoutes);
 app.use('/api/telegram', telegramRoutes);
 app.use('/api/email', emailRoutes);
+app.use('/api/ai', aiRoutes);
 
 // Error Handler
 app.use(errorHandler);
