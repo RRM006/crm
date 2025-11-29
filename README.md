@@ -13,6 +13,7 @@ A complete, modern multi-tenant CRM web application built with React, Node.js, E
 ### User Management
 - **Unified User System**: Single account across all companies
 - **JWT Authentication**: Secure authentication with access and refresh tokens
+- **Google OAuth Sign-In**: Sign in with Google account (auto-creates or links accounts)
 - **Profile Management**: Update profile information and change password
 
 ### CRM Modules
@@ -107,6 +108,9 @@ PORT=5000
 NODE_ENV=development
 FRONTEND_URL="http://localhost:5173"
 
+# Google OAuth (Optional - for Google Sign-In)
+GOOGLE_CLIENT_ID="your-google-client-id.apps.googleusercontent.com"
+
 # Telegram Bot (Optional - for Telegram integration)
 TELEGRAM_BOT_TOKEN="your-telegram-bot-token"
 TELEGRAM_WEBHOOK_URL="https://your-domain.com/telegram-webhook"  # Production only
@@ -135,12 +139,18 @@ cd frontend
 npm install
 ```
 
-3. Start the development server:
+3. Create a `.env` file for frontend configuration:
+```env
+VITE_API_URL="http://localhost:5000/api"
+VITE_GOOGLE_CLIENT_ID="your-google-client-id.apps.googleusercontent.com"
+```
+
+4. Start the development server:
 ```bash
 npm run dev
 ```
 
-4. Open http://localhost:5173 in your browser
+5. Open http://localhost:5173 in your browser
 
 ## Project Structure
 
@@ -319,11 +329,53 @@ NODE_ENV=production
 
 The bot automatically switches to webhook mode in production.
 
+## 🔐 Google OAuth Setup
+
+### Creating Google OAuth Credentials
+
+1. **Go to Google Cloud Console**: https://console.cloud.google.com/
+2. **Create a new project** or select an existing one
+3. **Enable the Google+ API**:
+   - Go to "APIs & Services" → "Library"
+   - Search for "Google+ API" and enable it
+4. **Create OAuth credentials**:
+   - Go to "APIs & Services" → "Credentials"
+   - Click "Create Credentials" → "OAuth client ID"
+   - Select "Web application"
+   - Add authorized JavaScript origins:
+     - `http://localhost:5173` (development)
+     - `https://your-domain.com` (production)
+   - Add authorized redirect URIs (not needed for implicit flow)
+5. **Copy the Client ID** (looks like: `xxx.apps.googleusercontent.com`)
+
+### Configuration
+
+**Backend `.env`**:
+```env
+GOOGLE_CLIENT_ID="your-client-id.apps.googleusercontent.com"
+```
+
+**Frontend `.env`**:
+```env
+VITE_GOOGLE_CLIENT_ID="your-client-id.apps.googleusercontent.com"
+```
+
+### How It Works
+
+1. User clicks "Sign in with Google" on login/signup page
+2. Google OAuth popup appears for authentication
+3. User selects their Google account
+4. Backend verifies the Google token
+5. If email exists: Links Google account and logs in
+6. If new user: Creates account with Google profile info
+
 ## API Endpoints
 
 ### Authentication
 - `POST /api/auth/signup` - Register new user
 - `POST /api/auth/login` - Login user
+- `POST /api/auth/google` - Sign in with Google OAuth
+- `DELETE /api/auth/google/unlink` - Unlink Google account
 - `POST /api/auth/refresh-token` - Refresh access token
 - `POST /api/auth/logout` - Logout user
 - `GET /api/auth/me` - Get current user

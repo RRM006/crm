@@ -111,6 +111,37 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
+  const googleSignIn = async (credential) => {
+    try {
+      const response = await api.post('/auth/google', { credential })
+      
+      if (response.data.success) {
+        const { user, companies, accessToken, refreshToken, isNewUser, accountLinked } = response.data.data
+        
+        localStorage.setItem('accessToken', accessToken)
+        localStorage.setItem('refreshToken', refreshToken)
+        setAccessToken(accessToken)
+        setUser(user)
+        setCompanies(companies || [])
+
+        if (isNewUser) {
+          toast.success('Account created with Google!')
+        } else if (accountLinked) {
+          toast.success('Google account linked successfully!')
+        } else {
+          toast.success('Welcome back!')
+        }
+        
+        navigate('/select-role')
+        return { success: true, isNewUser }
+      }
+    } catch (error) {
+      const message = error.response?.data?.message || 'Google sign-in failed'
+      toast.error(message)
+      return { success: false, error: message }
+    }
+  }
+
   const logout = async () => {
     try {
       const refreshToken = localStorage.getItem('refreshToken')
@@ -184,6 +215,7 @@ export const AuthProvider = ({ children }) => {
     accessToken,
     login,
     signup,
+    googleSignIn,
     logout,
     refreshUser,
     updateProfile,

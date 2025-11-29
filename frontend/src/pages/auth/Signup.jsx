@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { motion } from 'framer-motion'
 import { useAuth } from '../../context/AuthContext'
 import { User, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react'
+import GoogleSignInButton from '../../components/GoogleSignInButton'
 
 const signupSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -22,10 +23,24 @@ const signupSchema = z.object({
 })
 
 const Signup = () => {
-  const { signup } = useAuth()
+  const { signup, googleSignIn } = useAuth()
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false)
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setIsGoogleLoading(true)
+    try {
+      await googleSignIn(credentialResponse.credential)
+    } finally {
+      setIsGoogleLoading(false)
+    }
+  }
+
+  const handleGoogleError = () => {
+    console.error('Google sign-up failed')
+  }
 
   const {
     register,
@@ -160,7 +175,7 @@ const Signup = () => {
 
         <button
           type="submit"
-          disabled={isLoading}
+          disabled={isLoading || isGoogleLoading}
           className="btn btn-primary w-full py-3"
         >
           {isLoading ? (
@@ -173,6 +188,30 @@ const Signup = () => {
           )}
         </button>
       </form>
+
+      {/* Divider */}
+      <div className="relative my-6">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-dark-200 dark:border-dark-700"></div>
+        </div>
+        <div className="relative flex justify-center text-sm">
+          <span className="px-4 bg-white dark:bg-dark-800 text-dark-500">Or continue with</span>
+        </div>
+      </div>
+
+      {/* Google Sign-Up */}
+      <div className="relative">
+        {isGoogleLoading && (
+          <div className="absolute inset-0 bg-white/50 dark:bg-dark-800/50 flex items-center justify-center rounded-lg z-10">
+            <Loader2 className="w-6 h-6 animate-spin text-primary-500" />
+          </div>
+        )}
+        <GoogleSignInButton 
+          onSuccess={handleGoogleSuccess}
+          onError={handleGoogleError}
+          text="signup_with"
+        />
+      </div>
 
       <p className="text-center mt-8 text-dark-500">
         Already have an account?{' '}

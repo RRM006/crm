@@ -82,6 +82,8 @@ export default api
 export const authAPI = {
   login: (data) => api.post('/auth/login', data),
   signup: (data) => api.post('/auth/signup', data),
+  googleSignIn: (credential) => api.post('/auth/google', { credential }),
+  unlinkGoogle: () => api.delete('/auth/google/unlink'),
   logout: (refreshToken) => api.post('/auth/logout', { refreshToken }),
   refreshToken: (refreshToken) => api.post('/auth/refresh-token', { refreshToken }),
   getMe: () => api.get('/auth/me'),
