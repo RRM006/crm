@@ -22,11 +22,31 @@ export const chat = async (req: AuthenticatedRequest, res: Response): Promise<vo
       return;
     }
 
-    const { message, conversationId } = req.body;
+    const { message, conversationId, context } = req.body;
 
     if (!message || typeof message !== 'string') {
       res.status(400).json({ success: false, message: 'Message is required' });
       return;
+    }
+
+    // Build context-aware message
+    let contextualMessage = message;
+    if (context) {
+      const contextParts: string[] = [];
+      
+      if (context.currentPage) {
+        contextParts.push(`[User is currently on the ${context.currentPage} page]`);
+      }
+      if (context.selectedEntity) {
+        contextParts.push(`[User is viewing ${context.selectedEntity.type}: ${context.selectedEntity.name || context.selectedEntity.id}]`);
+      }
+      if (context.recentActions && context.recentActions.length > 0) {
+        contextParts.push(`[Recent actions: ${context.recentActions.join(', ')}]`);
+      }
+      
+      if (contextParts.length > 0) {
+        contextualMessage = `${contextParts.join(' ')}\n\nUser message: ${message}`;
+      }
     }
 
     // Get user's role for this company
@@ -64,17 +84,27 @@ export const chat = async (req: AuthenticatedRequest, res: Response): Promise<vo
       messages = conversation.messages as Message[];
     }
 
-    // Add user message
+    // Add user message (store original message, but send contextual to AI)
     const userMessage: Message = {
       role: 'user',
-      content: message,
+      content: message, // Store original message in history
       timestamp: new Date().toISOString()
     };
     messages.push(userMessage);
 
+    // Create messages array for AI with context
+    const messagesForAI = [...messages];
+    if (contextualMessage !== message) {
+      // Replace last message with contextual version for AI processing
+      messagesForAI[messagesForAI.length - 1] = {
+        ...userMessage,
+        content: contextualMessage
+      };
+    }
+
     // Generate AI response with MCP tools
     const aiResult = await generateAIResponse(
-      messages,
+      messagesForAI,
       req.user.id,
       req.companyId,
       userRole.role as Role

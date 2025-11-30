@@ -9,10 +9,15 @@ import { User, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react'
 import GoogleSignInButton from '../../components/GoogleSignInButton'
 
 const signupSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
-  email: z.string().email('Please enter a valid email'),
+  name: z.string()
+    .min(2, 'Name must be at least 2 characters')
+    .max(100, 'Name must be less than 100 characters'),
+  email: z.string()
+    .email('Please enter a valid email')
+    .max(255, 'Email must be less than 255 characters'),
   password: z.string()
     .min(8, 'Password must be at least 8 characters')
+    .max(100, 'Password must be less than 100 characters')
     .regex(/(?=.*[a-z])/, 'Password must contain a lowercase letter')
     .regex(/(?=.*[A-Z])/, 'Password must contain an uppercase letter')
     .regex(/(?=.*\d)/, 'Password must contain a number'),
@@ -76,6 +81,7 @@ const Signup = () => {
               type="text"
               {...register('name')}
               placeholder="Enter your name"
+              maxLength={100}
               className={`input pl-12 ${errors.name ? 'input-error' : ''}`}
             />
           </div>
@@ -99,6 +105,7 @@ const Signup = () => {
               type="email"
               {...register('email')}
               placeholder="Enter your email"
+              maxLength={255}
               className={`input pl-12 ${errors.email ? 'input-error' : ''}`}
             />
           </div>
@@ -122,6 +129,7 @@ const Signup = () => {
               type={showPassword ? 'text' : 'password'}
               {...register('password')}
               placeholder="Create a password"
+              maxLength={100}
               className={`input pl-12 pr-12 ${errors.password ? 'input-error' : ''}`}
             />
             <button
@@ -152,6 +160,7 @@ const Signup = () => {
               type={showConfirmPassword ? 'text' : 'password'}
               {...register('confirmPassword')}
               placeholder="Confirm your password"
+              maxLength={100}
               className={`input pl-12 pr-12 ${errors.confirmPassword ? 'input-error' : ''}`}
             />
             <button

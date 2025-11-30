@@ -284,6 +284,114 @@ export const CRM_TOOLS: ToolDefinition[] = [
     allowedRoles: ['CUSTOMER']
   },
   {
+    name: 'create_lead',
+    description: 'Create a new lead in the sales pipeline. Use this when user wants to add a new potential customer or opportunity.',
+    parameters: {
+      type: 'object',
+      properties: {
+        title: {
+          type: 'string',
+          description: 'Title/name of the lead opportunity'
+        },
+        description: {
+          type: 'string',
+          description: 'Description of the lead'
+        },
+        value: {
+          type: 'number',
+          description: 'Estimated deal value in dollars'
+        },
+        source: {
+          type: 'string',
+          enum: ['WEBSITE', 'REFERRAL', 'COLD_CALL', 'ADVERTISEMENT', 'SOCIAL_MEDIA', 'EMAIL', 'EVENT', 'OTHER'],
+          description: 'How the lead was acquired'
+        },
+        priority: {
+          type: 'string',
+          enum: ['LOW', 'MEDIUM', 'HIGH', 'URGENT'],
+          description: 'Priority level'
+        },
+        contactEmail: {
+          type: 'string',
+          description: 'Contact email for the lead'
+        },
+        contactPhone: {
+          type: 'string',
+          description: 'Contact phone for the lead'
+        }
+      },
+      required: ['title']
+    },
+    allowedRoles: ['ADMIN', 'STAFF']
+  },
+  {
+    name: 'create_contact',
+    description: 'Create a new contact in the CRM. Use this when user wants to add a new person/contact.',
+    parameters: {
+      type: 'object',
+      properties: {
+        firstName: {
+          type: 'string',
+          description: 'First name of the contact'
+        },
+        lastName: {
+          type: 'string',
+          description: 'Last name of the contact'
+        },
+        email: {
+          type: 'string',
+          description: 'Email address'
+        },
+        phone: {
+          type: 'string',
+          description: 'Phone number'
+        },
+        jobTitle: {
+          type: 'string',
+          description: 'Job title/position'
+        },
+        company: {
+          type: 'string',
+          description: 'Company name'
+        }
+      },
+      required: ['firstName', 'lastName']
+    },
+    allowedRoles: ['ADMIN', 'STAFF']
+  },
+  {
+    name: 'create_customer',
+    description: 'Create a new customer record. Use this when converting a lead or adding a paying customer.',
+    parameters: {
+      type: 'object',
+      properties: {
+        name: {
+          type: 'string',
+          description: 'Customer name (person or company)'
+        },
+        email: {
+          type: 'string',
+          description: 'Customer email'
+        },
+        phone: {
+          type: 'string',
+          description: 'Customer phone'
+        },
+        company: {
+          type: 'string',
+          description: 'Company name if B2B'
+        },
+        status: {
+          type: 'string',
+          enum: ['ACTIVE', 'INACTIVE', 'PENDING'],
+          description: 'Customer status'
+        }
+      },
+      required: ['name', 'email']
+    },
+    allowedRoles: ['ADMIN']
+  },
+  {
     name: 'draft_email',
     description: 'Draft an email message. Returns the drafted content that the user can review and send.',
     parameters: {
@@ -672,6 +780,105 @@ export async function executeTool(
           }
         });
         return { success: true, result: { message: 'Issue created successfully', issue } };
+      }
+
+      case 'create_lead': {
+        const lead = await prisma.lead.create({
+          data: {
+            title: params.title,
+            description: params.description,
+            value: params.value || 0,
+            source: params.source || 'OTHER',
+            priority: params.priority || 'MEDIUM',
+            status: 'NEW',
+            contactEmail: params.contactEmail,
+            contactPhone: params.contactPhone,
+            companyId,
+            assignedToId: userId
+          },
+          select: {
+            id: true,
+            title: true,
+            status: true,
+            value: true,
+            priority: true,
+            source: true
+          }
+        });
+
+        // Log activity
+        await prisma.activity.create({
+          data: {
+            type: 'LEAD_CREATED',
+            title: 'New lead created',
+            description: `Lead "${params.title}" was created via AI assistant`,
+            leadId: lead.id,
+            companyId,
+            createdById: userId
+          }
+        });
+
+        return { success: true, result: { message: 'Lead created successfully', lead } };
+      }
+
+      case 'create_contact': {
+        const contact = await prisma.contact.create({
+          data: {
+            firstName: params.firstName,
+            lastName: params.lastName,
+            email: params.email,
+            phone: params.phone,
+            jobTitle: params.jobTitle,
+            companyId
+          },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            phone: true,
+            jobTitle: true
+          }
+        });
+
+        return { success: true, result: { message: 'Contact created successfully', contact } };
+      }
+
+      case 'create_customer': {
+        if (role !== 'ADMIN') {
+          return { success: false, error: 'Only admins can create customers' };
+        }
+
+        const customer = await prisma.customer.create({
+          data: {
+            name: params.name,
+            email: params.email,
+            phone: params.phone,
+            company: params.company,
+            status: params.status || 'ACTIVE',
+            companyId
+          },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            status: true
+          }
+        });
+
+        // Log activity
+        await prisma.activity.create({
+          data: {
+            type: 'CUSTOMER_CREATED',
+            title: 'New customer created',
+            description: `Customer "${params.name}" was created via AI assistant`,
+            customerId: customer.id,
+            companyId,
+            createdById: userId
+          }
+        });
+
+        return { success: true, result: { message: 'Customer created successfully', customer } };
       }
 
       case 'draft_email': {

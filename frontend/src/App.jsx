@@ -28,6 +28,7 @@ import Tasks from './pages/crm/Tasks'
 import Notes from './pages/crm/Notes'
 import Activities from './pages/crm/Activities'
 import Issues from './pages/crm/Issues'
+import Pipeline from './pages/crm/Pipeline'
 import Email from './pages/email/Email'
 
 // Settings
@@ -168,6 +169,11 @@ function App() {
         <Route path="/notes" element={<Notes />} />
         <Route path="/activities" element={<Activities />} />
         <Route path="/issues" element={<Issues />} />
+        <Route path="/pipeline" element={
+          <ProtectedRoute allowedRoles={['ADMIN', 'STAFF']}>
+            <Pipeline />
+          </ProtectedRoute>
+        } />
         <Route path="/email" element={<Email />} />
         
         {/* Customer-specific route redirect */}

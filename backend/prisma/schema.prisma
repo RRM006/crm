@@ -47,6 +47,7 @@ model User {
   createdCustomers  Customer[]        @relation("CustomerCreator")
   createdLeads      Lead[]            @relation("LeadCreator")
   assignedLeads     Lead[]            @relation("LeadAssignee")
+  ownedDeals        Deal[]            @relation("DealOwner")
   createdContacts   Contact[]         @relation("ContactCreator")
   createdTasks      Task[]            @relation("TaskCreator")
   assignedTasks     Task[]            @relation("TaskAssignee")
@@ -106,6 +107,8 @@ model Company {
   userCompanyRoles UserCompanyRole[]
   customers        Customer[]
   leads            Lead[]
+  deals            Deal[]
+  pipelineStages   PipelineStage[]
   contacts         Contact[]
   tasks            Task[]
   notes            Note[]
@@ -180,6 +183,7 @@ model Customer {
 
   // Relations
   leads       Lead[]
+  deals       Deal[]
   contacts    Contact[]
   tasks       Task[]
   customerNotes Note[]
@@ -218,9 +222,24 @@ model Lead {
   source      LeadSource @default(OTHER)
   priority    Int        @default(1) // 1-5
   
+  // Pipeline stage (for Kanban view)
+  stageId     String?
+  stage       PipelineStage? @relation(fields: [stageId], references: [id], onDelete: SetNull)
+  stageEnteredAt DateTime?  // When lead entered current stage
+  stageOrder  Int        @default(0) // Order within the stage for drag-drop
+  
+  // Contact info
+  contactEmail String?
+  contactPhone String?
+  contactName  String?
+  
   // Customer link (optional)
   customerId  String?
   customer    Customer?  @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  
+  // Converted to deal
+  convertedToDealId String? @unique
+  convertedToDeal   Deal?   @relation("LeadToDeal", fields: [convertedToDealId], references: [id], onDelete: SetNull)
   
   // Tenant isolation
   companyId   String
@@ -242,8 +261,121 @@ model Lead {
   notes       Note[]
   activities  Activity[]
   emails      Email[]
+  stageHistory LeadStageHistory[]
 
+  @@index([companyId, stageId])
+  @@index([companyId, status])
   @@map("leads")
+}
+
+// ==================== SALES PIPELINE ====================
+
+model PipelineStage {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  color       String   @default("#6366f1") // Hex color for UI
+  order       Int      @default(0)  // Stage order in pipeline
+  isDefault   Boolean  @default(false) // Default stage for new leads
+  isClosed    Boolean  @default(false) // Won/Lost stages
+  isWon       Boolean  @default(false) // Specifically the Won stage
+  probability Int      @default(0)     // Win probability percentage (0-100)
+  
+  // Tenant isolation
+  companyId   String
+  tenantCompany Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  leads       Lead[]
+  deals       Deal[]
+  stageHistory LeadStageHistory[]
+
+  @@unique([companyId, name])
+  @@index([companyId, order])
+  @@map("pipeline_stages")
+}
+
+model LeadStageHistory {
+  id          String   @id @default(uuid())
+  
+  leadId      String
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  
+  stageId     String
+  stage       PipelineStage @relation(fields: [stageId], references: [id], onDelete: Cascade)
+  
+  enteredAt   DateTime @default(now())
+  exitedAt    DateTime?
+  duration    Int?     // Duration in minutes spent in this stage
+  
+  // Who moved it
+  movedById   String?
+  
+  @@index([leadId, enteredAt])
+  @@map("lead_stage_history")
+}
+
+// ==================== DEALS ====================
+
+enum DealStatus {
+  ACTIVE
+  WON
+  LOST
+}
+
+model Deal {
+  id          String     @id @default(uuid())
+  title       String
+  description String?
+  value       Float      @default(0)
+  currency    String     @default("USD")
+  status      DealStatus @default(ACTIVE)
+  
+  // Pipeline stage
+  stageId     String?
+  stage       PipelineStage? @relation(fields: [stageId], references: [id], onDelete: SetNull)
+  stageOrder  Int        @default(0) // Order within the stage
+  
+  // Win/Loss details
+  wonAt       DateTime?
+  lostAt      DateTime?
+  lostReason  String?
+  
+  // Probability & Expected Revenue
+  probability Int        @default(50) // 0-100
+  expectedRevenue Float? // value * probability
+  
+  // Customer & Contact
+  customerId  String?
+  customer    Customer?  @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  
+  // Source lead (if converted from lead)
+  sourceLead  Lead?      @relation("LeadToDeal")
+  
+  // Tenant isolation
+  companyId   String
+  tenantCompany Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  // Owner & Team
+  ownerId     String
+  owner       User       @relation("DealOwner", fields: [ownerId], references: [id])
+  
+  expectedCloseDate DateTime?
+  actualCloseDate   DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  // Relations
+  tasks       Task[]     @relation("DealTasks")
+  notes       Note[]     @relation("DealNotes")
+  activities  Activity[] @relation("DealActivities")
+
+  @@index([companyId, stageId])
+  @@index([companyId, status])
+  @@map("deals")
 }
 
 model Contact {
@@ -306,6 +438,8 @@ model Task {
   customer    Customer?    @relation(fields: [customerId], references: [id], onDelete: SetNull)
   leadId      String?
   lead        Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  dealId      String?
+  deal        Deal?        @relation("DealTasks", fields: [dealId], references: [id], onDelete: SetNull)
   
   // Tenant isolation
   companyId   String
@@ -333,6 +467,8 @@ model Note {
   customer    Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
   leadId      String?
   lead        Lead?     @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  dealId      String?
+  deal        Deal?     @relation("DealNotes", fields: [dealId], references: [id], onDelete: SetNull)
   
   // Tenant isolation
   companyId   String
@@ -356,7 +492,11 @@ enum ActivityType {
   NOTE_ADDED
   LEAD_CREATED
   LEAD_STATUS_CHANGED
+  LEAD_CONVERTED
+  LEAD_STAGE_CHANGED
   CUSTOMER_CREATED
+  DEAL_CREATED
+  DEAL_STAGE_CHANGED
   DEAL_WON
   DEAL_LOST
   OTHER
@@ -374,6 +514,8 @@ model Activity {
   customer    Customer?    @relation(fields: [customerId], references: [id], onDelete: SetNull)
   leadId      String?
   lead        Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  dealId      String?
+  deal        Deal?        @relation("DealActivities", fields: [dealId], references: [id], onDelete: SetNull)
   
   // Tenant isolation
   companyId   String

@@ -15,6 +15,7 @@ import {
   CheckCircle,
   Circle
 } from 'lucide-react'
+import { validateForm, getTodayDateString } from '../../utils/validation'
 
 const Tasks = () => {
   const [tasks, setTasks] = useState([])
@@ -32,6 +33,14 @@ const Tasks = () => {
     dueDate: ''
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [errors, setErrors] = useState({})
+
+  // Validation config
+  const validationConfig = {
+    title: { required: true, min: 3, max: 100, label: 'Title' },
+    description: { required: false, max: 500, label: 'Description' },
+    dueDate: { required: false, futureDate: true, allowToday: true, label: 'Due Date' }
+  }
 
   useEffect(() => {
     fetchTasks()
@@ -58,6 +67,16 @@ const Tasks = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    
+    // Validate form
+    const { isValid, errors: validationErrors } = validateForm(formData, validationConfig)
+    setErrors(validationErrors)
+    
+    if (!isValid) {
+      toast.error('Please fix the validation errors')
+      return
+    }
+    
     setIsSubmitting(true)
     try {
       if (editingTask) {
@@ -86,6 +105,7 @@ const Tasks = () => {
       priority: 'MEDIUM',
       dueDate: ''
     })
+    setErrors({})
   }
 
   const handleEdit = (task) => {
@@ -97,6 +117,7 @@ const Tasks = () => {
       priority: task.priority,
       dueDate: task.dueDate ? task.dueDate.split('T')[0] : ''
     })
+    setErrors({})
     setShowModal(true)
   }
 
@@ -333,23 +354,51 @@ const Tasks = () => {
 
               <form onSubmit={handleSubmit} className="p-6 space-y-4">
                 <div>
-                  <label className="label">Title *</label>
+                  <div className="flex items-center justify-between">
+                    <label className="label">Title <span className="text-red-500">*</span></label>
+                    <span className={`text-xs ${formData.title.length > 90 ? 'text-amber-500' : 'text-dark-400'}`}>
+                      {formData.title.length}/100
+                    </span>
+                  </div>
                   <input
                     type="text"
                     value={formData.title}
-                    onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                    onChange={(e) => {
+                      if (e.target.value.length <= 100) {
+                        setFormData(prev => ({ ...prev, title: e.target.value }))
+                        setErrors(prev => ({ ...prev, title: null }))
+                      }
+                    }}
                     required
-                    className="input"
-                    placeholder="Task title"
+                    minLength={3}
+                    maxLength={100}
+                    className={`input ${errors.title ? 'border-red-500 focus:ring-red-500' : ''}`}
+                    placeholder="Task title (min 3 characters)"
                   />
+                  {errors.title && (
+                    <p className="flex items-center gap-1 text-sm text-red-500 mt-1">
+                      <AlertCircle className="w-4 h-4" />
+                      {errors.title}
+                    </p>
+                  )}
                 </div>
 
                 <div>
-                  <label className="label">Description</label>
+                  <div className="flex items-center justify-between">
+                    <label className="label">Description</label>
+                    <span className={`text-xs ${formData.description.length > 450 ? 'text-amber-500' : 'text-dark-400'}`}>
+                      {formData.description.length}/500
+                    </span>
+                  </div>
                   <textarea
                     value={formData.description}
-                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                    className="input min-h-[100px]"
+                    onChange={(e) => {
+                      if (e.target.value.length <= 500) {
+                        setFormData(prev => ({ ...prev, description: e.target.value }))
+                      }
+                    }}
+                    maxLength={500}
+                    className={`input min-h-[100px] ${errors.description ? 'border-red-500' : ''}`}
                     placeholder="Task description"
                   />
                 </div>
@@ -388,13 +437,24 @@ const Tasks = () => {
                   <input
                     type="date"
                     value={formData.dueDate}
-                    onChange={(e) => setFormData(prev => ({ ...prev, dueDate: e.target.value }))}
-                    className="input"
+                    onChange={(e) => {
+                      setFormData(prev => ({ ...prev, dueDate: e.target.value }))
+                      setErrors(prev => ({ ...prev, dueDate: null }))
+                    }}
+                    min={getTodayDateString()}
+                    className={`input ${errors.dueDate ? 'border-red-500 focus:ring-red-500' : ''}`}
                   />
+                  {errors.dueDate && (
+                    <p className="flex items-center gap-1 text-sm text-red-500 mt-1">
+                      <AlertCircle className="w-4 h-4" />
+                      {errors.dueDate}
+                    </p>
+                  )}
+                  <p className="text-xs text-dark-400 mt-1">Cannot select a past date</p>
                 </div>
 
                 <div className="flex gap-3 pt-4">
-                  <button type="button" onClick={() => setShowModal(false)} className="btn btn-secondary flex-1">
+                  <button type="button" onClick={() => { setShowModal(false); setErrors({}) }} className="btn btn-secondary flex-1">
                     Cancel
                   </button>
                   <button type="submit" disabled={isSubmitting} className="btn btn-primary flex-1">

@@ -9,8 +9,12 @@ import { Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react'
 import GoogleSignInButton from '../../components/GoogleSignInButton'
 
 const loginSchema = z.object({
-  email: z.string().email('Please enter a valid email'),
-  password: z.string().min(1, 'Password is required')
+  email: z.string()
+    .email('Please enter a valid email')
+    .max(255, 'Email must be less than 255 characters'),
+  password: z.string()
+    .min(1, 'Password is required')
+    .max(100, 'Password must be less than 100 characters')
 })
 
 const Login = () => {
@@ -66,6 +70,7 @@ const Login = () => {
               type="email"
               {...register('email')}
               placeholder="Enter your email"
+              maxLength={255}
               className={`input pl-12 ${errors.email ? 'input-error' : ''}`}
             />
           </div>
@@ -89,6 +94,7 @@ const Login = () => {
               type={showPassword ? 'text' : 'password'}
               {...register('password')}
               placeholder="Enter your password"
+              maxLength={100}
               className={`input pl-12 pr-12 ${errors.password ? 'input-error' : ''}`}
             />
             <button

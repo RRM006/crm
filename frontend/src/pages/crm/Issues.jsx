@@ -19,6 +19,7 @@ import {
   PhoneOff,
   PhoneMissed
 } from 'lucide-react'
+import { validateForm } from '../../utils/validation'
 
 const Issues = () => {
   const { currentRole } = useCompany()
@@ -51,6 +52,13 @@ const Issues = () => {
   })
   const [resolution, setResolution] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [errors, setErrors] = useState({})
+
+  // Validation config
+  const validationConfig = {
+    title: { required: true, min: 5, max: 150, label: 'Title' },
+    description: { required: true, min: 10, max: 2000, label: 'Description' }
+  }
 
   useEffect(() => {
     fetchIssues()
@@ -76,12 +84,23 @@ const Issues = () => {
 
   const handleCreateIssue = async (e) => {
     e.preventDefault()
+    
+    // Validate form
+    const { isValid, errors: validationErrors } = validateForm(formData, validationConfig)
+    setErrors(validationErrors)
+    
+    if (!isValid) {
+      toast.error('Please fix the validation errors')
+      return
+    }
+    
     setIsSubmitting(true)
     try {
       await issuesAPI.create(formData)
       toast.success('Issue created successfully')
       setShowCreateModal(false)
       setFormData({ title: '', description: '', priority: 'MEDIUM', category: 'GENERAL' })
+      setErrors({})
       fetchIssues()
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to create issue')
@@ -369,28 +388,62 @@ const Issues = () => {
 
               <form onSubmit={handleCreateIssue} className="p-6 space-y-4">
                 <div>
-                  <label className="label">Title *</label>
+                  <div className="flex items-center justify-between">
+                    <label className="label">Title <span className="text-red-500">*</span></label>
+                    <span className={`text-xs ${formData.title.length > 135 ? 'text-amber-500' : 'text-dark-400'}`}>
+                      {formData.title.length}/150
+                    </span>
+                  </div>
                   <input
                     type="text"
                     value={formData.title}
-                    onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                    onChange={(e) => {
+                      if (e.target.value.length <= 150) {
+                        setFormData(prev => ({ ...prev, title: e.target.value }))
+                        setErrors(prev => ({ ...prev, title: null }))
+                      }
+                    }}
                     required
                     minLength={5}
-                    className="input"
-                    placeholder="Brief description of your issue"
+                    maxLength={150}
+                    className={`input ${errors.title ? 'border-red-500 focus:ring-red-500' : ''}`}
+                    placeholder="Brief description of your issue (min 5 characters)"
                   />
+                  {errors.title && (
+                    <p className="flex items-center gap-1 text-sm text-red-500 mt-1">
+                      <AlertCircle className="w-4 h-4" />
+                      {errors.title}
+                    </p>
+                  )}
                 </div>
 
                 <div>
-                  <label className="label">Description *</label>
+                  <div className="flex items-center justify-between">
+                    <label className="label">Description <span className="text-red-500">*</span></label>
+                    <span className={`text-xs ${formData.description.length > 1800 ? 'text-amber-500' : 'text-dark-400'}`}>
+                      {formData.description.length}/2000
+                    </span>
+                  </div>
                   <textarea
                     value={formData.description}
-                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                    onChange={(e) => {
+                      if (e.target.value.length <= 2000) {
+                        setFormData(prev => ({ ...prev, description: e.target.value }))
+                        setErrors(prev => ({ ...prev, description: null }))
+                      }
+                    }}
                     required
                     minLength={10}
-                    className="input min-h-[120px]"
-                    placeholder="Please provide detailed information about your issue..."
+                    maxLength={2000}
+                    className={`input min-h-[120px] ${errors.description ? 'border-red-500 focus:ring-red-500' : ''}`}
+                    placeholder="Please provide detailed information about your issue (min 10 characters)..."
                   />
+                  {errors.description && (
+                    <p className="flex items-center gap-1 text-sm text-red-500 mt-1">
+                      <AlertCircle className="w-4 h-4" />
+                      {errors.description}
+                    </p>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -425,7 +478,7 @@ const Issues = () => {
                 </div>
 
                 <div className="flex gap-3 pt-4">
-                  <button type="button" onClick={() => setShowCreateModal(false)} className="btn btn-secondary flex-1">Cancel</button>
+                  <button type="button" onClick={() => { setShowCreateModal(false); setErrors({}) }} className="btn btn-secondary flex-1">Cancel</button>
                   <button type="submit" disabled={isSubmitting} className="btn btn-primary flex-1">
                     {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Submit Issue'}
                   </button>

@@ -189,13 +189,48 @@ export const telegramAPI = {
 
 // AI Assistant API (with MCP tools)
 export const aiAPI = {
-  chat: (message, conversationId) => api.post('/ai/chat', { message, conversationId }),
+  chat: (message, conversationId, context = null) => api.post('/ai/chat', { message, conversationId, context }),
   getConversations: () => api.get('/ai/conversations'),
   getConversation: (id) => api.get(`/ai/conversations/${id}`),
   deleteConversation: (id) => api.delete(`/ai/conversations/${id}`),
   clearConversations: () => api.delete('/ai/conversations'),
   getSuggestions: () => api.get('/ai/suggestions'),
   getTools: () => api.get('/ai/tools') // Get available MCP tools for current role
+}
+
+// Pipeline API
+export const pipelineAPI = {
+  // Stages
+  getStages: () => api.get('/pipeline/stages'),
+  createStage: (data) => api.post('/pipeline/stages', data),
+  updateStage: (id, data) => api.put(`/pipeline/stages/${id}`, data),
+  deleteStage: (id) => api.delete(`/pipeline/stages/${id}`),
+  reorderStages: (stageIds) => api.post('/pipeline/stages/reorder', { stageIds }),
+  
+  // Kanban view
+  getKanbanView: (type = 'leads') => api.get(`/pipeline/kanban?type=${type}`),
+  
+  // Drag & drop
+  moveToStage: (data) => api.post('/pipeline/move', data),
+  reorderInStage: (data) => api.post('/pipeline/reorder', data),
+  
+  // Analytics
+  getAnalytics: (period = 30) => api.get(`/pipeline/analytics?period=${period}`),
+  
+  // Convert lead to deal
+  convertToDeal: (leadId, data) => api.post(`/pipeline/convert/${leadId}`, data)
+}
+
+// Deals API
+export const dealsAPI = {
+  getAll: (params) => api.get('/deals', { params }),
+  getOne: (id) => api.get(`/deals/${id}`),
+  create: (data) => api.post('/deals', data),
+  update: (id, data) => api.put(`/deals/${id}`, data),
+  delete: (id) => api.delete(`/deals/${id}`),
+  markAsWon: (id, data) => api.post(`/deals/${id}/won`, data),
+  markAsLost: (id, data) => api.post(`/deals/${id}/lost`, data),
+  getStats: (period = 30) => api.get(`/deals/stats?period=${period}`)
 }
 
 // Email API

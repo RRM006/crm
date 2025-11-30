@@ -26,7 +26,8 @@ import {
   Search,
   AlertCircle,
   Mail,
-  Bot
+  Bot,
+  Kanban
 } from 'lucide-react'
 
 const DashboardLayout = () => {
@@ -42,6 +43,7 @@ const DashboardLayout = () => {
 
   const navigation = [
     { name: 'Dashboard', icon: LayoutDashboard, href: `/dashboard/${currentRole?.toLowerCase() || 'admin'}` },
+    { name: 'Pipeline', icon: Kanban, href: '/pipeline', roles: ['ADMIN', 'STAFF'] },
     { name: 'Email', icon: Mail, href: '/email' },
     { name: 'Customers', icon: Users, href: '/customers', roles: ['ADMIN'] },
     { name: 'Leads', icon: Target, href: '/leads', roles: ['ADMIN', 'STAFF'] },

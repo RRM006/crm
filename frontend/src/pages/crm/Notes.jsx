@@ -10,8 +10,10 @@ import {
   Trash2,
   X,
   Loader2,
-  Pin
+  Pin,
+  AlertCircle
 } from 'lucide-react'
+import { validateForm } from '../../utils/validation'
 
 const Notes = () => {
   const [notes, setNotes] = useState([])
@@ -21,6 +23,12 @@ const Notes = () => {
   const [editingNote, setEditingNote] = useState(null)
   const [formData, setFormData] = useState({ content: '', isPinned: false })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [errors, setErrors] = useState({})
+
+  // Validation config
+  const validationConfig = {
+    content: { required: true, min: 1, max: 5000, label: 'Content' }
+  }
 
   useEffect(() => {
     fetchNotes()
@@ -42,6 +50,16 @@ const Notes = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    
+    // Validate form
+    const { isValid, errors: validationErrors } = validateForm(formData, validationConfig)
+    setErrors(validationErrors)
+    
+    if (!isValid) {
+      toast.error('Please fix the validation errors')
+      return
+    }
+    
     setIsSubmitting(true)
     try {
       if (editingNote) {
@@ -54,6 +72,7 @@ const Notes = () => {
       setShowModal(false)
       setEditingNote(null)
       setFormData({ content: '', isPinned: false })
+      setErrors({})
       fetchNotes()
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to save note')
@@ -65,6 +84,7 @@ const Notes = () => {
   const handleEdit = (note) => {
     setEditingNote(note)
     setFormData({ content: note.content, isPinned: note.isPinned })
+    setErrors({})
     setShowModal(true)
   }
 
@@ -100,6 +120,7 @@ const Notes = () => {
           onClick={() => {
             setEditingNote(null)
             setFormData({ content: '', isPinned: false })
+            setErrors({})
             setShowModal(true)
           }}
           className="btn btn-primary"
@@ -246,14 +267,31 @@ const Notes = () => {
 
               <form onSubmit={handleSubmit} className="p-6 space-y-4">
                 <div>
-                  <label className="label">Content *</label>
+                  <div className="flex items-center justify-between">
+                    <label className="label">Content <span className="text-red-500">*</span></label>
+                    <span className={`text-xs ${formData.content.length > 4500 ? 'text-amber-500' : 'text-dark-400'}`}>
+                      {formData.content.length}/5000
+                    </span>
+                  </div>
                   <textarea
                     value={formData.content}
-                    onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
+                    onChange={(e) => {
+                      if (e.target.value.length <= 5000) {
+                        setFormData(prev => ({ ...prev, content: e.target.value }))
+                        setErrors(prev => ({ ...prev, content: null }))
+                      }
+                    }}
                     required
-                    className="input min-h-[200px]"
+                    maxLength={5000}
+                    className={`input min-h-[200px] ${errors.content ? 'border-red-500 focus:ring-red-500' : ''}`}
                     placeholder="Write your note here..."
                   />
+                  {errors.content && (
+                    <p className="flex items-center gap-1 text-sm text-red-500 mt-1">
+                      <AlertCircle className="w-4 h-4" />
+                      {errors.content}
+                    </p>
+                  )}
                 </div>
 
                 <label className="flex items-center gap-2 cursor-pointer">
@@ -267,7 +305,7 @@ const Notes = () => {
                 </label>
 
                 <div className="flex gap-3 pt-4">
-                  <button type="button" onClick={() => setShowModal(false)} className="btn btn-secondary flex-1">
+                  <button type="button" onClick={() => { setShowModal(false); setErrors({}) }} className="btn btn-secondary flex-1">
                     Cancel
                   </button>
                   <button type="submit" disabled={isSubmitting} className="btn btn-primary flex-1">

@@ -15,9 +15,15 @@ import {
 import toast from 'react-hot-toast'
 
 const profileSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
-  phone: z.string().optional(),
-  bio: z.string().optional()
+  name: z.string()
+    .min(2, 'Name must be at least 2 characters')
+    .max(100, 'Name must be less than 100 characters'),
+  phone: z.string()
+    .max(20, 'Phone must be less than 20 characters')
+    .optional(),
+  bio: z.string()
+    .max(500, 'Bio must be less than 500 characters')
+    .optional()
 })
 
 const Profile = () => {
@@ -98,6 +104,7 @@ const Profile = () => {
               <input
                 type="text"
                 {...register('name')}
+                maxLength={100}
                 className={`input pl-12 ${errors.name ? 'input-error' : ''}`}
               />
             </div>
@@ -128,9 +135,13 @@ const Profile = () => {
                 type="tel"
                 {...register('phone')}
                 placeholder="+1 (555) 000-0000"
-                className="input pl-12"
+                maxLength={20}
+                className={`input pl-12 ${errors.phone ? 'input-error' : ''}`}
               />
             </div>
+            {errors.phone && (
+              <p className="text-red-500 text-sm mt-1">{errors.phone.message}</p>
+            )}
           </div>
 
           <div>
@@ -140,9 +151,13 @@ const Profile = () => {
               <textarea
                 {...register('bio')}
                 placeholder="Tell us about yourself..."
-                className="input pl-12 min-h-[120px]"
+                maxLength={500}
+                className={`input pl-12 min-h-[120px] ${errors.bio ? 'input-error' : ''}`}
               />
             </div>
+            {errors.bio && (
+              <p className="text-red-500 text-sm mt-1">{errors.bio.message}</p>
+            )}
           </div>
 
           <button

@@ -13,8 +13,10 @@ import {
   X,
   Loader2,
   DollarSign,
-  Calendar
+  Calendar,
+  AlertCircle
 } from 'lucide-react'
+import { validateForm, getTodayDateString } from '../../utils/validation'
 
 const Leads = () => {
   const navigate = useNavigate()
@@ -31,9 +33,19 @@ const Leads = () => {
     value: '',
     status: 'NEW',
     source: 'OTHER',
-    priority: 3
+    priority: 3,
+    expectedCloseDate: ''
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [errors, setErrors] = useState({})
+
+  // Validation config
+  const validationConfig = {
+    title: { required: true, min: 3, max: 100, label: 'Title' },
+    description: { required: false, max: 1000, label: 'Description' },
+    value: { required: false, min: 0, max: 999999999, label: 'Value' },
+    expectedCloseDate: { required: false, futureDate: true, allowToday: true, label: 'Expected Close Date' }
+  }
 
   useEffect(() => {
     fetchLeads()
@@ -60,12 +72,23 @@ const Leads = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    
+    // Validate form
+    const { isValid, errors: validationErrors } = validateForm(formData, validationConfig)
+    setErrors(validationErrors)
+    
+    if (!isValid) {
+      toast.error('Please fix the validation errors')
+      return
+    }
+    
     setIsSubmitting(true)
     try {
       const data = {
         ...formData,
         value: parseFloat(formData.value) || 0,
-        priority: parseInt(formData.priority)
+        priority: parseInt(formData.priority),
+        expectedCloseDate: formData.expectedCloseDate || null
       }
       
       if (editingLead) {
@@ -77,7 +100,8 @@ const Leads = () => {
       }
       setShowModal(false)
       setEditingLead(null)
-      setFormData({ title: '', description: '', value: '', status: 'NEW', source: 'OTHER', priority: 3 })
+      setFormData({ title: '', description: '', value: '', status: 'NEW', source: 'OTHER', priority: 3, expectedCloseDate: '' })
+      setErrors({})
       fetchLeads()
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to save lead')
@@ -94,8 +118,10 @@ const Leads = () => {
       value: lead.value?.toString() || '',
       status: lead.status,
       source: lead.source,
-      priority: lead.priority
+      priority: lead.priority,
+      expectedCloseDate: lead.expectedCloseDate ? lead.expectedCloseDate.split('T')[0] : ''
     })
+    setErrors({})
     setShowModal(true)
   }
 
@@ -139,7 +165,8 @@ const Leads = () => {
         <button
           onClick={() => {
             setEditingLead(null)
-            setFormData({ title: '', description: '', value: '', status: 'NEW', source: 'OTHER', priority: 3 })
+            setFormData({ title: '', description: '', value: '', status: 'NEW', source: 'OTHER', priority: 3, expectedCloseDate: '' })
+            setErrors({})
             setShowModal(true)
           }}
           className="btn btn-primary"
@@ -327,25 +354,59 @@ const Leads = () => {
 
               <form onSubmit={handleSubmit} className="p-6 space-y-4">
                 <div>
-                  <label className="label">Title *</label>
+                  <div className="flex items-center justify-between">
+                    <label className="label">Title <span className="text-red-500">*</span></label>
+                    <span className={`text-xs ${formData.title.length > 90 ? 'text-amber-500' : 'text-dark-400'}`}>
+                      {formData.title.length}/100
+                    </span>
+                  </div>
                   <input
                     type="text"
                     value={formData.title}
-                    onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                    onChange={(e) => {
+                      if (e.target.value.length <= 100) {
+                        setFormData(prev => ({ ...prev, title: e.target.value }))
+                        setErrors(prev => ({ ...prev, title: null }))
+                      }
+                    }}
                     required
-                    className="input"
-                    placeholder="Lead title"
+                    minLength={3}
+                    maxLength={100}
+                    className={`input ${errors.title ? 'border-red-500 focus:ring-red-500' : ''}`}
+                    placeholder="Lead title (min 3 characters)"
                   />
+                  {errors.title && (
+                    <p className="flex items-center gap-1 text-sm text-red-500 mt-1">
+                      <AlertCircle className="w-4 h-4" />
+                      {errors.title}
+                    </p>
+                  )}
                 </div>
 
                 <div>
-                  <label className="label">Description</label>
+                  <div className="flex items-center justify-between">
+                    <label className="label">Description</label>
+                    <span className={`text-xs ${formData.description.length > 900 ? 'text-amber-500' : 'text-dark-400'}`}>
+                      {formData.description.length}/1000
+                    </span>
+                  </div>
                   <textarea
                     value={formData.description}
-                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                    className="input min-h-[100px]"
+                    onChange={(e) => {
+                      if (e.target.value.length <= 1000) {
+                        setFormData(prev => ({ ...prev, description: e.target.value }))
+                      }
+                    }}
+                    maxLength={1000}
+                    className={`input min-h-[100px] ${errors.description ? 'border-red-500' : ''}`}
                     placeholder="Lead description"
                   />
+                  {errors.description && (
+                    <p className="flex items-center gap-1 text-sm text-red-500 mt-1">
+                      <AlertCircle className="w-4 h-4" />
+                      {errors.description}
+                    </p>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -358,6 +419,7 @@ const Leads = () => {
                       className="input"
                       placeholder="0"
                       min="0"
+                      max="999999999"
                     />
                   </div>
                   <div>
@@ -411,10 +473,34 @@ const Leads = () => {
                   </div>
                 </div>
 
+                <div>
+                  <label className="label">Expected Close Date</label>
+                  <input
+                    type="date"
+                    value={formData.expectedCloseDate}
+                    onChange={(e) => {
+                      setFormData(prev => ({ ...prev, expectedCloseDate: e.target.value }))
+                      setErrors(prev => ({ ...prev, expectedCloseDate: null }))
+                    }}
+                    min={getTodayDateString()}
+                    className={`input ${errors.expectedCloseDate ? 'border-red-500 focus:ring-red-500' : ''}`}
+                  />
+                  {errors.expectedCloseDate && (
+                    <p className="flex items-center gap-1 text-sm text-red-500 mt-1">
+                      <AlertCircle className="w-4 h-4" />
+                      {errors.expectedCloseDate}
+                    </p>
+                  )}
+                  <p className="text-xs text-dark-400 mt-1">Cannot select a past date</p>
+                </div>
+
                 <div className="flex gap-3 pt-4">
                   <button
                     type="button"
-                    onClick={() => setShowModal(false)}
+                    onClick={() => {
+                      setShowModal(false)
+                      setErrors({})
+                    }}
                     className="btn btn-secondary flex-1"
                   >
                     Cancel

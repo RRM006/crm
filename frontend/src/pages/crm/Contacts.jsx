@@ -12,8 +12,10 @@ import {
   Loader2,
   Mail,
   Phone,
-  Briefcase
+  Briefcase,
+  AlertCircle
 } from 'lucide-react'
+import { validateForm } from '../../utils/validation'
 
 const Contacts = () => {
   const [contacts, setContacts] = useState([])
@@ -32,6 +34,17 @@ const Contacts = () => {
     isPrimary: false
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [errors, setErrors] = useState({})
+
+  // Validation config
+  const validationConfig = {
+    firstName: { required: true, min: 2, max: 50, label: 'First Name' },
+    lastName: { required: true, min: 2, max: 50, label: 'Last Name' },
+    email: { required: true, min: 5, max: 255, pattern: 'email', label: 'Email' },
+    phone: { required: false, min: 10, max: 20, pattern: 'phone', label: 'Phone' },
+    jobTitle: { required: false, min: 2, max: 100, label: 'Job Title' },
+    department: { required: false, min: 2, max: 100, label: 'Department' }
+  }
 
   useEffect(() => {
     fetchContacts()
@@ -57,6 +70,16 @@ const Contacts = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    
+    // Validate form
+    const { isValid, errors: validationErrors } = validateForm(formData, validationConfig)
+    setErrors(validationErrors)
+    
+    if (!isValid) {
+      toast.error('Please fix the validation errors')
+      return
+    }
+    
     setIsSubmitting(true)
     try {
       if (editingContact) {
@@ -87,6 +110,7 @@ const Contacts = () => {
       department: '',
       isPrimary: false
     })
+    setErrors({})
   }
 
   const handleEdit = (contact) => {
@@ -100,6 +124,7 @@ const Contacts = () => {
       department: contact.department || '',
       isPrimary: contact.isPrimary
     })
+    setErrors({})
     setShowModal(true)
   }
 
@@ -300,64 +325,158 @@ const Contacts = () => {
               <form onSubmit={handleSubmit} className="p-6 space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="label">First Name *</label>
+                    <div className="flex items-center justify-between">
+                      <label className="label">First Name <span className="text-red-500">*</span></label>
+                      <span className={`text-xs ${formData.firstName.length > 45 ? 'text-amber-500' : 'text-dark-400'}`}>
+                        {formData.firstName.length}/50
+                      </span>
+                    </div>
                     <input
                       type="text"
                       value={formData.firstName}
-                      onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
+                      onChange={(e) => {
+                        if (e.target.value.length <= 50) {
+                          setFormData(prev => ({ ...prev, firstName: e.target.value }))
+                          setErrors(prev => ({ ...prev, firstName: null }))
+                        }
+                      }}
                       required
-                      className="input"
+                      minLength={2}
+                      maxLength={50}
+                      className={`input ${errors.firstName ? 'border-red-500 focus:ring-red-500' : ''}`}
+                      placeholder="Min 2 characters"
                     />
+                    {errors.firstName && (
+                      <p className="flex items-center gap-1 text-sm text-red-500 mt-1">
+                        <AlertCircle className="w-4 h-4" />
+                        {errors.firstName}
+                      </p>
+                    )}
                   </div>
                   <div>
-                    <label className="label">Last Name *</label>
+                    <div className="flex items-center justify-between">
+                      <label className="label">Last Name <span className="text-red-500">*</span></label>
+                      <span className={`text-xs ${formData.lastName.length > 45 ? 'text-amber-500' : 'text-dark-400'}`}>
+                        {formData.lastName.length}/50
+                      </span>
+                    </div>
                     <input
                       type="text"
                       value={formData.lastName}
-                      onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
+                      onChange={(e) => {
+                        if (e.target.value.length <= 50) {
+                          setFormData(prev => ({ ...prev, lastName: e.target.value }))
+                          setErrors(prev => ({ ...prev, lastName: null }))
+                        }
+                      }}
                       required
-                      className="input"
+                      minLength={2}
+                      maxLength={50}
+                      className={`input ${errors.lastName ? 'border-red-500 focus:ring-red-500' : ''}`}
+                      placeholder="Min 2 characters"
                     />
+                    {errors.lastName && (
+                      <p className="flex items-center gap-1 text-sm text-red-500 mt-1">
+                        <AlertCircle className="w-4 h-4" />
+                        {errors.lastName}
+                      </p>
+                    )}
                   </div>
                 </div>
 
                 <div>
-                  <label className="label">Email *</label>
+                  <div className="flex items-center justify-between">
+                    <label className="label">Email <span className="text-red-500">*</span></label>
+                    <span className={`text-xs ${formData.email.length > 230 ? 'text-amber-500' : 'text-dark-400'}`}>
+                      {formData.email.length}/255
+                    </span>
+                  </div>
                   <input
                     type="email"
                     value={formData.email}
-                    onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                    onChange={(e) => {
+                      if (e.target.value.length <= 255) {
+                        setFormData(prev => ({ ...prev, email: e.target.value }))
+                        setErrors(prev => ({ ...prev, email: null }))
+                      }
+                    }}
                     required
-                    className="input"
+                    maxLength={255}
+                    className={`input ${errors.email ? 'border-red-500 focus:ring-red-500' : ''}`}
+                    placeholder="email@example.com"
                   />
+                  {errors.email && (
+                    <p className="flex items-center gap-1 text-sm text-red-500 mt-1">
+                      <AlertCircle className="w-4 h-4" />
+                      {errors.email}
+                    </p>
+                  )}
                 </div>
 
                 <div>
-                  <label className="label">Phone</label>
+                  <div className="flex items-center justify-between">
+                    <label className="label">Phone</label>
+                    <span className={`text-xs ${formData.phone.length > 18 ? 'text-amber-500' : 'text-dark-400'}`}>
+                      {formData.phone.length}/20
+                    </span>
+                  </div>
                   <input
                     type="tel"
                     value={formData.phone}
-                    onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                    className="input"
+                    onChange={(e) => {
+                      if (e.target.value.length <= 20) {
+                        setFormData(prev => ({ ...prev, phone: e.target.value }))
+                        setErrors(prev => ({ ...prev, phone: null }))
+                      }
+                    }}
+                    maxLength={20}
+                    className={`input ${errors.phone ? 'border-red-500 focus:ring-red-500' : ''}`}
+                    placeholder="+1 (555) 000-0000"
                   />
+                  {errors.phone && (
+                    <p className="flex items-center gap-1 text-sm text-red-500 mt-1">
+                      <AlertCircle className="w-4 h-4" />
+                      {errors.phone}
+                    </p>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="label">Job Title</label>
+                    <div className="flex items-center justify-between">
+                      <label className="label">Job Title</label>
+                      <span className={`text-xs ${formData.jobTitle.length > 90 ? 'text-amber-500' : 'text-dark-400'}`}>
+                        {formData.jobTitle.length}/100
+                      </span>
+                    </div>
                     <input
                       type="text"
                       value={formData.jobTitle}
-                      onChange={(e) => setFormData(prev => ({ ...prev, jobTitle: e.target.value }))}
+                      onChange={(e) => {
+                        if (e.target.value.length <= 100) {
+                          setFormData(prev => ({ ...prev, jobTitle: e.target.value }))
+                        }
+                      }}
+                      maxLength={100}
                       className="input"
                     />
                   </div>
                   <div>
-                    <label className="label">Department</label>
+                    <div className="flex items-center justify-between">
+                      <label className="label">Department</label>
+                      <span className={`text-xs ${formData.department.length > 90 ? 'text-amber-500' : 'text-dark-400'}`}>
+                        {formData.department.length}/100
+                      </span>
+                    </div>
                     <input
                       type="text"
                       value={formData.department}
-                      onChange={(e) => setFormData(prev => ({ ...prev, department: e.target.value }))}
+                      onChange={(e) => {
+                        if (e.target.value.length <= 100) {
+                          setFormData(prev => ({ ...prev, department: e.target.value }))
+                        }
+                      }}
+                      maxLength={100}
                       className="input"
                     />
                   </div>
@@ -374,7 +493,7 @@ const Contacts = () => {
                 </label>
 
                 <div className="flex gap-3 pt-4">
-                  <button type="button" onClick={() => setShowModal(false)} className="btn btn-secondary flex-1">
+                  <button type="button" onClick={() => { setShowModal(false); setErrors({}) }} className="btn btn-secondary flex-1">
                     Cancel
                   </button>
                   <button type="submit" disabled={isSubmitting} className="btn btn-primary flex-1">

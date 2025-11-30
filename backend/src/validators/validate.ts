@@ -10,9 +10,12 @@ export const validate = (req: Request, res: Response, next: NextFunction): void 
       message: error.msg
     }));
 
+    // Log validation errors for debugging
+    console.log('Validation failed:', formattedErrors);
+
     res.status(400).json({
       success: false,
-      message: 'Validation failed',
+      message: formattedErrors[0]?.message || 'Validation failed',
       errors: formattedErrors
     });
     return;
