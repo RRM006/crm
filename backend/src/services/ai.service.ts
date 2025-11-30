@@ -8,7 +8,7 @@ import { getToolsForRole, executeTool } from './mcp-tools';
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-pro';
 
 // Models that support function calling
-const FUNCTION_CALLING_MODELS = ['gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-1.5-pro-latest', 'gemini-1.5-flash-latest'];
+const FUNCTION_CALLING_MODELS = ['gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-1.5-pro-latest', 'gemini-1.5-flash-latest', 'gemini-2.0-flash', 'gemini-2.0-flash-exp'];
 const supportsFunctionCalling = FUNCTION_CALLING_MODELS.some(m => GEMINI_MODEL.includes(m));
 
 // Schema types for Gemini function declarations
